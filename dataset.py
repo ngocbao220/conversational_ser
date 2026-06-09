@@ -5,7 +5,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 import numpy as np
 import torch
-from datasets import Audio, Dataset, DatasetDict, load_dataset
+from datasets import Audio, Dataset, DatasetDict, Features, Sequence, Value, load_dataset
 
 
 CANONICAL_LABELS = ["neutral", "happy", "sad", "angry"]
@@ -101,6 +101,9 @@ def _audio_array(example: Mapping[str, Any]) -> np.ndarray:
     audio = example["audio"]
     if isinstance(audio, dict):
         array = audio.get("array")
+    elif hasattr(audio, "get_all_samples"):
+        samples = audio.get_all_samples()
+        array = samples.data
     else:
         array = audio
     return np.asarray(array, dtype=np.float32)
@@ -117,11 +120,20 @@ def prepare_example(example: Dict[str, Any], max_audio_length: Optional[int] = N
     if max_audio_length is not None and audio.shape[0] > max_audio_length:
         audio = audio[:max_audio_length]
 
-    prepared = dict(example)
-    prepared["input_values"] = audio.astype(np.float32)
-    prepared["labels"] = LABEL2ID[label]
-    prepared["emotion"] = label
-    prepared["transcript"] = get_transcript(example)
+    prepared = {
+        "input_values": audio.astype(np.float32).tolist(),
+        "labels": LABEL2ID[label],
+        "emotion": label,
+        "transcript": get_transcript(example),
+        "speaking_rate": 0.0,
+        "pitch_mean": 0.0,
+        "pitch_std": 0.0,
+        "rms": 0.0,
+        "relative_db": 0.0,
+    }
+    for feature_name in ("speaking_rate", "pitch_mean", "pitch_std", "rms", "relative_db"):
+        if feature_name in example and example[feature_name] is not None:
+            prepared[feature_name] = float(example[feature_name])
     return prepared
 
 
@@ -132,6 +144,7 @@ def filter_and_prepare_dataset(
     num_proc: int = 1,
 ) -> Dataset:
     dataset = dataset.cast_column("audio", Audio(sampling_rate=sampling_rate))
+    dataset = dataset.filter(lambda row: get_canonical_label(row) is not None, num_proc=num_proc)
     max_audio_length = None
     if max_duration_seconds is not None and max_duration_seconds > 0:
         max_audio_length = int(max_duration_seconds * sampling_rate)
@@ -139,16 +152,28 @@ def filter_and_prepare_dataset(
     def mapper(example: Dict[str, Any]) -> Dict[str, Any]:
         prepared = prepare_example(example, max_audio_length=max_audio_length)
         if prepared is None:
-            return {"keep": False, "input_values": [], "labels": -1, "emotion": "", "transcript": ""}
-        prepared["keep"] = True
+            raise ValueError("Unexpected unmapped label after filtering.")
         return prepared
 
-    mapped = dataset.map(mapper, num_proc=num_proc)
-    mapped = mapped.filter(lambda row: bool(row["keep"]), num_proc=num_proc)
-    drop_cols = [col for col in ("keep",) if col in mapped.column_names]
-    if drop_cols:
-        mapped = mapped.remove_columns(drop_cols)
-    return mapped
+    feature_schema = Features(
+        {
+            "input_values": Sequence(Value("float32")),
+            "labels": Value("int64"),
+            "emotion": Value("string"),
+            "transcript": Value("string"),
+            "speaking_rate": Value("float32"),
+            "pitch_mean": Value("float32"),
+            "pitch_std": Value("float32"),
+            "rms": Value("float32"),
+            "relative_db": Value("float32"),
+        }
+    )
+    return dataset.map(
+        mapper,
+        num_proc=num_proc,
+        remove_columns=dataset.column_names,
+        features=feature_schema,
+    )
 
 
 def load_iemocap_splits(config: Mapping[str, Any]) -> DatasetDict:
@@ -179,7 +204,7 @@ def load_iemocap_splits(config: Mapping[str, Any]) -> DatasetDict:
     validation_split = dataset_cfg.get("validation_split", "validation")
     test_split = dataset_cfg.get("test_split", "test")
     if validation_split in prepared and test_split in prepared:
-        return prepared
+        return limit_split_sizes(prepared, dataset_cfg, seed)
 
     train = prepared["train"]
     validation_size = float(dataset_cfg.get("validation_size", 0.1))
@@ -192,7 +217,11 @@ def load_iemocap_splits(config: Mapping[str, Any]) -> DatasetDict:
     holdout = first["test"]
     validation_fraction = validation_size / holdout_size
     second = stratified_or_random_split(holdout, test_size=1.0 - validation_fraction, seed=seed)
-    return DatasetDict({"train": first["train"], "validation": second["train"], "test": second["test"]})
+    return limit_split_sizes(
+        DatasetDict({"train": first["train"], "validation": second["train"], "test": second["test"]}),
+        dataset_cfg,
+        seed,
+    )
 
 
 def stratified_or_random_split(dataset: Dataset, test_size: float, seed: int) -> DatasetDict:
@@ -200,6 +229,23 @@ def stratified_or_random_split(dataset: Dataset, test_size: float, seed: int) ->
         return dataset.train_test_split(test_size=test_size, seed=seed, stratify_by_column="labels")
     except ValueError:
         return dataset.train_test_split(test_size=test_size, seed=seed)
+
+
+def limit_split_sizes(datasets: DatasetDict, dataset_cfg: Mapping[str, Any], seed: int) -> DatasetDict:
+    limits = {
+        "train": dataset_cfg.get("max_train_samples"),
+        "validation": dataset_cfg.get("max_validation_samples"),
+        "test": dataset_cfg.get("max_test_samples"),
+    }
+    limited = DatasetDict()
+    for split, dataset in datasets.items():
+        limit = limits.get(split)
+        if limit is None:
+            limited[split] = dataset
+            continue
+        limit = min(int(limit), len(dataset))
+        limited[split] = dataset.shuffle(seed=seed).select(range(limit))
+    return limited
 
 
 @dataclass

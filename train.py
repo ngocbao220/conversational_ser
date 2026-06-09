@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any, Dict
@@ -94,7 +95,7 @@ def main() -> None:
     )
     epochs = int(training_cfg.get("epochs", 5))
     accumulation_steps = int(training_cfg.get("gradient_accumulation_steps", 1))
-    total_steps = max(1, (len(train_loader) // accumulation_steps) * epochs)
+    total_steps = max(1, math.ceil(len(train_loader) / accumulation_steps) * epochs)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
     criterion = torch.nn.CrossEntropyLoss()
 

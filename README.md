@@ -15,6 +15,38 @@ Các nhãn minor như `fear`, `surprise`, `disgust`, `other`, `tie_prediction` b
 pip install -r requirements.txt
 ```
 
+## Cài đặt trên cloud NVIDIA GPU CUDA 12.6
+
+Nên cài PyTorch CUDA riêng trước, sau đó cài các dependency còn lại:
+
+```bash
+conda create -n speech python=3.11 -y
+conda activate speech
+pip install -r requirements-cu126-torch.txt
+pip install -r requirements-cloud.txt
+```
+
+Nếu muốn dùng một file requirements duy nhất trên cloud Linux có NVIDIA GPU:
+
+```bash
+conda create -n speech python=3.11 -y
+conda activate speech
+pip install -r requirements-cloud-cu126.txt
+```
+
+Hoặc tạo trực tiếp từ file môi trường:
+
+```bash
+conda env create -f environment-cloud-cu126.yml
+conda activate speech
+```
+
+Kiểm tra GPU:
+
+```bash
+python -c "import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'no cuda')"
+```
+
 ## Train
 
 ```bash
