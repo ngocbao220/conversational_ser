@@ -9,36 +9,12 @@ Baseline này dùng `AbstractTTS/IEMOCAP`, gom nhãn IEMOCAP về 4 class:
 
 Các nhãn minor như `fear`, `surprise`, `disgust`, `other`, `tie_prediction` bị bỏ qua trong loader.
 
-## Cài đặt
-
-```bash
-pip install -r requirements.txt
-```
-
 ## Cài đặt trên cloud NVIDIA GPU CUDA 12.6
 
-Nên cài PyTorch CUDA riêng trước, sau đó cài các dependency còn lại:
-
 ```bash
 conda create -n speech python=3.11 -y
 conda activate speech
-pip install -r requirements-cu126-torch.txt
-pip install -r requirements-cloud.txt
-```
-
-Nếu muốn dùng một file requirements duy nhất trên cloud Linux có NVIDIA GPU:
-
-```bash
-conda create -n speech python=3.11 -y
-conda activate speech
-pip install -r requirements-cloud-cu126.txt
-```
-
-Hoặc tạo trực tiếp từ file môi trường:
-
-```bash
-conda env create -f environment-cloud-cu126.yml
-conda activate speech
+pip install -r requirements.txt
 ```
 
 Kiểm tra GPU:
@@ -65,7 +41,28 @@ Checkpoint tốt nhất theo validation macro F1 được lưu ở:
 outputs/ser_baseline/best.pt
 ```
 
-Log epoch được in dạng JSON và lưu vào `outputs/ser_baseline/history.json`.
+Log dễ đọc được append dần vào `outputs/ser_baseline/train.log`, phù hợp để quan sát bằng:
+
+```bash
+tail -f outputs/ser_baseline/train.log
+```
+
+Toàn bộ history theo epoch vẫn được lưu vào `outputs/ser_baseline/history.json` sau khi train xong.
+
+Muốn bật Weights & Biases, sửa trong config:
+
+```yaml
+logging:
+  use_wandb: true
+  wandb_project: ser-baseline
+  wandb_run_name: wavlm-baseline
+```
+
+Trên server chưa login wandb:
+
+```bash
+wandb login
+```
 
 ## Inference
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from typing import Dict, Iterable, List, Mapping, Tuple
+from typing import Dict, Iterable, List, Mapping, Optional, Tuple
 
 import numpy as np
 import torch
@@ -10,20 +10,28 @@ import yaml
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 from torch.utils.data import DataLoader
 from transformers import AutoFeatureExtractor
+from tqdm.auto import tqdm
 
 from dataset import CANONICAL_LABELS, SERDataCollator, load_iemocap_splits
 from model import SERModel
 
 
 @torch.no_grad()
-def predict_batches(model: torch.nn.Module, dataloader: Iterable[Mapping[str, torch.Tensor]], device: torch.device) -> Tuple[np.ndarray, np.ndarray, float]:
+def predict_batches(
+    model: torch.nn.Module,
+    dataloader: Iterable[Mapping[str, torch.Tensor]],
+    device: torch.device,
+    progress_bar: bool = False,
+    description: Optional[str] = None,
+) -> Tuple[np.ndarray, np.ndarray, float]:
     model.eval()
     losses: List[float] = []
     predictions: List[int] = []
     targets: List[int] = []
     criterion = torch.nn.CrossEntropyLoss()
 
-    for batch in dataloader:
+    iterator = tqdm(dataloader, desc=description or "Evaluating", leave=False) if progress_bar else dataloader
+    for batch in iterator:
         labels = batch["labels"].to(device)
         logits = model(
             input_values=batch["input_values"].to(device),
@@ -56,8 +64,14 @@ def compute_metrics(predictions: np.ndarray, targets: np.ndarray) -> Dict[str, o
     }
 
 
-def evaluate_model(model: torch.nn.Module, dataloader: Iterable[Mapping[str, torch.Tensor]], device: torch.device) -> Dict[str, object]:
-    predictions, targets, loss = predict_batches(model, dataloader, device)
+def evaluate_model(
+    model: torch.nn.Module,
+    dataloader: Iterable[Mapping[str, torch.Tensor]],
+    device: torch.device,
+    progress_bar: bool = False,
+    description: Optional[str] = None,
+) -> Dict[str, object]:
+    predictions, targets, loss = predict_batches(model, dataloader, device, progress_bar, description)
     metrics = compute_metrics(predictions, targets)
     metrics["loss"] = loss
     metrics["labels"] = CANONICAL_LABELS

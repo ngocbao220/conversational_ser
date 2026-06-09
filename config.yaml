@@ -31,5 +31,14 @@ training:
   num_workers: 0
   device: auto
 
+logging:
+  progress_bar: true
+  log_file: train.log
+  use_wandb: false
+  wandb_project: ser-baseline
+  wandb_run_name: null
+  wandb_entity: null
+  wandb_mode: online
+
 inference:
   checkpoint_path: outputs/ser_baseline/best.pt
