@@ -75,6 +75,40 @@ def format_epoch_log(epoch_log: Dict[str, Any], learning_rate: float, best_macro
     )
 
 
+def init_wandb(config: Dict[str, Any], output_dir: Path):
+    logging_cfg = config.get("logging", {})
+    if not bool(logging_cfg.get("use_wandb", False)):
+        return None
+
+    try:
+        import wandb
+    except ImportError as exc:
+        raise ImportError("use_wandb=true but wandb is not installed. Run `pip install wandb`.") from exc
+
+    return wandb.init(
+        project=str(logging_cfg.get("wandb_project", "conversational-SER")),
+        name=logging_cfg.get("wandb_run_name") or None,
+        entity=logging_cfg.get("wandb_entity") or None,
+        mode=str(logging_cfg.get("wandb_mode", "online")),
+        dir=str(output_dir),
+        config=config,
+    )
+
+
+def wandb_epoch_payload(epoch_log: Dict[str, Any], learning_rate: float, best_macro_f1: float) -> Dict[str, float]:
+    validation = epoch_log["validation"]
+    return {
+        "epoch": float(epoch_log["epoch"]),
+        "train/loss": float(epoch_log["train_loss"]),
+        "train/learning_rate": float(learning_rate),
+        "validation/loss": float(validation["loss"]),
+        "validation/accuracy": float(validation["accuracy"]),
+        "validation/macro_f1": float(validation["macro_f1"]),
+        "validation/weighted_f1": float(validation["weighted_f1"]),
+        "best/macro_f1": float(best_macro_f1),
+    }
+
+
 def log_training_session(
     log_path: Path,
     config: Dict[str, Any],
@@ -159,6 +193,10 @@ def main() -> None:
     device = resolve_device(str(training_cfg.get("device", "auto")))
     progress_bar = bool(logging_cfg.get("progress_bar", False))
     log_every_steps = int(logging_cfg.get("log_every_steps", 50))
+    wandb_run = init_wandb(config, output_dir)
+    if wandb_run is not None:
+        emit_log(log_path, f"wandb_initialized url={getattr(wandb_run, 'url', '')}")
+
     datasets = load_iemocap_splits(config)
     emit_log(
         log_path,
@@ -278,6 +316,8 @@ def main() -> None:
         best_for_log = max(best_macro_f1, float(val_metrics["macro_f1"]))
         log_line = format_epoch_log(epoch_log, current_lr, best_for_log)
         emit_log(log_path, log_line)
+        if wandb_run is not None:
+            wandb_run.log(wandb_epoch_payload(epoch_log, current_lr, best_for_log), step=epoch)
 
         save_checkpoint(output_dir / "last.pt", model, config, val_metrics)
         append_log_line(log_path, f"saved last checkpoint path={output_dir / 'last.pt'}")
@@ -311,6 +351,10 @@ def main() -> None:
     (output_dir / "history.json").write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
     (output_dir / "run_config.json").write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
     append_log_line(log_path, f"finished baseline=B0_utterance best_macro_f1={best_macro_f1:.6f}")
+    if wandb_run is not None:
+        wandb_run.summary["best_macro_f1"] = best_macro_f1
+        wandb_run.summary["best_checkpoint"] = str(output_dir / "best.pt")
+        wandb_run.finish()
 
 
 if __name__ == "__main__":
