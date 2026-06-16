@@ -109,6 +109,16 @@ def wandb_epoch_payload(epoch_log: Dict[str, Any], learning_rate: float, best_ma
     }
 
 
+def parameter_counts(model: torch.nn.Module) -> Dict[str, int]:
+    total = sum(parameter.numel() for parameter in model.parameters())
+    trainable = sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
+    return {
+        "total": total,
+        "trainable": trainable,
+        "frozen": total - trainable,
+    }
+
+
 def log_training_session(
     log_path: Path,
     config: Dict[str, Any],
@@ -226,6 +236,24 @@ def main() -> None:
     )
 
     model = build_b0_model(model_cfg, num_labels=len(CANONICAL_LABELS)).to(device)
+    param_counts = parameter_counts(model)
+    trainable_ratio = param_counts["trainable"] / max(param_counts["total"], 1)
+    emit_log(
+        log_path,
+        (
+            "model_parameters "
+            f"total={param_counts['total']:,} "
+            f"trainable={param_counts['trainable']:,} "
+            f"frozen={param_counts['frozen']:,} "
+            f"trainable_ratio={trainable_ratio:.6f}"
+        ),
+    )
+    if wandb_run is not None:
+        wandb_run.summary["parameters/total"] = param_counts["total"]
+        wandb_run.summary["parameters/trainable"] = param_counts["trainable"]
+        wandb_run.summary["parameters/frozen"] = param_counts["frozen"]
+        wandb_run.summary["parameters/trainable_ratio"] = trainable_ratio
+
     trainable_parameters = [parameter for parameter in model.parameters() if parameter.requires_grad]
     if not trainable_parameters:
         raise RuntimeError("B0 has no trainable parameters. Check classifier and freeze_encoder settings.")
