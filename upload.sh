@@ -129,20 +129,19 @@ if ! command -v hf >/dev/null 2>&1; then
   exit 1
 fi
 
-CREATE_ARGS=(--type "$REPO_TYPE")
+echo "Uploading $OUTPUT_DIR to Hugging Face repo $HF_REPO_ID:$PATH_IN_REPO"
+UPLOAD_ARGS=(
+  "$HF_REPO_ID"
+  "$OUTPUT_DIR"
+  "$PATH_IN_REPO"
+  --repo-type "$REPO_TYPE"
+  --revision "$REVISION"
+  --commit-message "$COMMIT_MESSAGE"
+)
 if [[ "$PRIVATE" == "true" ]]; then
-  CREATE_ARGS+=(--private)
+  UPLOAD_ARGS+=(--private)
 fi
 
-hf repo create "$HF_REPO_ID" "${CREATE_ARGS[@]}" --exist-ok
-
-echo "Uploading $OUTPUT_DIR to Hugging Face repo $HF_REPO_ID:$PATH_IN_REPO"
-hf upload \
-  "$HF_REPO_ID" \
-  "$OUTPUT_DIR" \
-  "$PATH_IN_REPO" \
-  --repo-type "$REPO_TYPE" \
-  --revision "$REVISION" \
-  --commit-message "$COMMIT_MESSAGE"
+hf upload "${UPLOAD_ARGS[@]}"
 
 echo "Done: https://huggingface.co/$HF_REPO_ID"
