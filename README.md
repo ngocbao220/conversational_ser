@@ -46,7 +46,18 @@ Mặc định B0 dùng `microsoft/wavlm-base`, frozen encoder, mean pooling, MLP
 ## Train B0
 
 ```bash
-python train_b0.py --config config.yaml
+./train_b0.sh
+```
+
+Các tham số train nằm ở đầu [train_b0.sh](/Users/ngocbao/Documents/Document/research/main/speech/exps/demo/train_b0.sh), ví dụ:
+
+```bash
+ENCODER_NAME="microsoft/wavlm-base"
+POOLING="mean"
+FREEZE_ENCODER=true
+BATCH_SIZE=4
+EPOCHS=5
+PROGRESS_NCOLS=100
 ```
 
 Checkpoint tốt nhất theo validation macro F1 được lưu ở:
@@ -55,7 +66,7 @@ Checkpoint tốt nhất theo validation macro F1 được lưu ở:
 outputs/b0_utterance/best.pt
 ```
 
-Log dễ đọc được append dần vào `outputs/ser_baseline/train.log`, phù hợp để quan sát bằng:
+Log dễ đọc được append dần vào `outputs/b0_utterance/train.log`, phù hợp để quan sát bằng:
 
 ```bash
 tail -f outputs/b0_utterance/train.log
@@ -63,13 +74,12 @@ tail -f outputs/b0_utterance/train.log
 
 Toàn bộ history theo epoch được lưu vào `outputs/b0_utterance/history.json` sau khi train xong.
 
-Muốn bật Weights & Biases, sửa trong config:
+Muốn bật Weights & Biases, sửa trong `train_b0.sh`:
 
-```yaml
-logging:
-  use_wandb: true
-  wandb_project: ser-baseline
-  wandb_run_name: b0-wavlm
+```bash
+USE_WANDB=true
+WANDB_PROJECT="conversational-SER"
+WANDB_RUN_NAME="b0-wavlm"
 ```
 
 Trên server chưa login wandb:
@@ -81,10 +91,7 @@ wandb login
 ## Evaluate B0
 
 ```bash
-python evaluate_b0.py \
-  --config config.yaml \
-  --checkpoint outputs/b0_utterance/best.pt \
-  --split test
+./evaluate_b0.sh
 ```
 
 Metrics được lưu mặc định tại:
@@ -96,9 +103,7 @@ outputs/b0_utterance/test_metrics.json
 ## Inference B0
 
 ```bash
-python infer_b0.py \
-  --audio path/to/audio.wav \
-  --checkpoint outputs/b0_utterance/best.pt
+./infer_b0.sh
 ```
 
 Output gồm emotion dự đoán, confidence, và probability từng class.
@@ -112,3 +117,4 @@ Output gồm emotion dự đoán, confidence, và probability từng class.
 - `evaluate_b0.py`: B0 accuracy, macro F1, weighted F1, confusion matrix.
 - `infer_b0.py`: B0 single-audio prediction.
 - `metrics.py`: reusable classification metrics cho các baseline sau.
+- `train_b0.sh`, `evaluate_b0.sh`, `infer_b0.sh`: entrypoint kiểu script, chỉnh tham số ở đầu file.

@@ -9,11 +9,11 @@ from pathlib import Path
 from typing import Any, Dict
 
 import torch
-import yaml
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoFeatureExtractor, get_linear_schedule_with_warmup
 
+from b0_config import add_b0_model_args, add_dataset_args, add_logging_args, add_training_args, build_b0_config
 from b0_model import B0UtteranceClassifier, build_b0_model
 from dataset import CANONICAL_LABELS, SERDataCollator, load_iemocap_splits
 from evaluate_b0 import evaluate_model, resolve_device
@@ -72,11 +72,12 @@ def progress_kwargs(logging_cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train B0 utterance-level SER baseline.")
-    parser.add_argument("--config", default="config.yaml")
+    add_dataset_args(parser)
+    add_b0_model_args(parser)
+    add_training_args(parser)
+    add_logging_args(parser)
     args = parser.parse_args()
-
-    with open(args.config, "r", encoding="utf-8") as handle:
-        config = yaml.safe_load(handle)
+    config = build_b0_config(args)
 
     b0_cfg = config["baselines"]["b0"]
     model_cfg = b0_cfg["model"]
@@ -207,8 +208,7 @@ def main() -> None:
             append_log_line(log_path, f"saved best checkpoint path={output_dir / 'best.pt'} macro_f1={best_macro_f1:.6f}")
 
     (output_dir / "history.json").write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
-    with (output_dir / "config.yaml").open("w", encoding="utf-8") as handle:
-        yaml.safe_dump(config, handle, sort_keys=False)
+    (output_dir / "run_config.json").write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
     append_log_line(log_path, f"finished baseline=B0_utterance best_macro_f1={best_macro_f1:.6f}")
 
 

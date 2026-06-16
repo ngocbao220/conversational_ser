@@ -41,7 +41,7 @@ Code structure:
 - `evaluate_b0.py`: B0 evaluation.
 - `infer_b0.py`: single-audio inference for B0.
 - `metrics.py`: reusable metrics for future baselines.
-- `config.yaml`: shared dataset/audio/logging config and per-baseline config.
+- `train_b0.sh`, `evaluate_b0.sh`, `infer_b0.sh`: script entrypoints with editable parameters at the top.
 
 Keep future baselines isolated:
 - Add new model/training files for B1, B2, etc.

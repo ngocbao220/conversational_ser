@@ -7,11 +7,11 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
 
 import numpy as np
 import torch
-import yaml
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoFeatureExtractor
 
+from b0_config import add_dataset_args, str_to_bool
 from b0_model import build_b0_model
 from dataset import CANONICAL_LABELS, SERDataCollator, load_iemocap_splits
 from metrics import classification_metrics
@@ -89,33 +89,63 @@ def load_checkpoint(path: str | Path, device: torch.device) -> Dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate B0 utterance-level SER baseline.")
-    parser.add_argument("--config", default="config.yaml")
-    parser.add_argument("--checkpoint", default=None)
+    parser.add_argument("--checkpoint", default="outputs/b0_utterance/best.pt")
     parser.add_argument("--split", default="test", choices=["train", "validation", "test"])
     parser.add_argument("--output", default=None)
     parser.add_argument("--device", default=None)
+    parser.add_argument("--eval-batch-size", type=int, default=None)
+    parser.add_argument("--num-workers", type=int, default=None)
+    parser.add_argument("--progress-bar", type=str_to_bool, default=None)
+    parser.add_argument("--progress-ncols", type=int, default=None)
+    add_dataset_args(parser)
     args = parser.parse_args()
 
-    with open(args.config, "r", encoding="utf-8") as handle:
-        config = yaml.safe_load(handle)
+    checkpoint_path = Path(args.checkpoint)
+    checkpoint = load_checkpoint(checkpoint_path, resolve_device(args.device or "auto"))
+    config = checkpoint["config"]
+    # Dataset arguments are intentionally CLI-controlled for eval scripts.
+    config["dataset"].update(
+        {
+            "name": args.dataset_name,
+            "validation_size": args.validation_size,
+            "test_size": args.test_size,
+            "seed": args.seed,
+            "num_proc": args.num_proc,
+        }
+    )
+    for key, value in {
+        "max_train_samples": args.max_train_samples,
+        "max_validation_samples": args.max_validation_samples,
+        "max_test_samples": args.max_test_samples,
+    }.items():
+        if value is not None:
+            config["dataset"][key] = value
+    config["audio"].update(
+        {
+            "sampling_rate": args.sampling_rate,
+            "max_duration_seconds": args.max_duration_seconds,
+        }
+    )
+
     b0_cfg = config["baselines"]["b0"]
     training_cfg = b0_cfg.get("training", {})
     model_cfg = b0_cfg.get("model", {})
     audio_cfg = config.get("audio", {})
     device = resolve_device(args.device or str(training_cfg.get("device", "auto")))
-
-    checkpoint_path = Path(args.checkpoint or b0_cfg.get("checkpoint_path", "outputs/b0_utterance/best.pt"))
-    checkpoint = load_checkpoint(checkpoint_path, device)
+    eval_batch_size = int(args.eval_batch_size or training_cfg.get("eval_batch_size", 8))
+    num_workers = int(args.num_workers if args.num_workers is not None else training_cfg.get("num_workers", 0))
+    progress_bar = bool(args.progress_bar if args.progress_bar is not None else config.get("logging", {}).get("progress_bar", True))
+    progress_ncols = int(args.progress_ncols or config.get("logging", {}).get("progress_ncols", 100))
 
     datasets = load_iemocap_splits(config)
     feature_extractor = AutoFeatureExtractor.from_pretrained(model_cfg["encoder_name"])
     collator = SERDataCollator(feature_extractor, sampling_rate=int(audio_cfg.get("sampling_rate", 16000)))
     dataloader = DataLoader(
         datasets[args.split],
-        batch_size=int(training_cfg.get("eval_batch_size", 8)),
+        batch_size=eval_batch_size,
         shuffle=False,
         collate_fn=collator,
-        num_workers=int(training_cfg.get("num_workers", 0)),
+        num_workers=num_workers,
     )
 
     model = build_b0_model(model_cfg, num_labels=len(CANONICAL_LABELS)).to(device)
@@ -124,9 +154,9 @@ def main() -> None:
         model,
         dataloader,
         device,
-        progress_bar=bool(config.get("logging", {}).get("progress_bar", False)),
+        progress_bar=progress_bar,
         description=f"B0 {args.split}",
-        progress_ncols=int(config.get("logging", {}).get("progress_ncols", 100)),
+        progress_ncols=progress_ncols,
     )
 
     output_path = Path(args.output or b0_cfg.get("metrics_path", f"outputs/b0_utterance/{args.split}_metrics.json"))
