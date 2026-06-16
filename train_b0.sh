@@ -73,7 +73,6 @@ ARGS=(
   --num-workers "$NUM_WORKERS"
   --device "$DEVICE"
   --progress-bar "$PROGRESS_BAR"
-  --progress-mininterval "$PROGRESS_MININTERVAL"
   --log-every-steps "$LOG_EVERY_STEPS"
   --log-file "$LOG_FILE"
   --use-wandb "$USE_WANDB"
