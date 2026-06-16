@@ -109,6 +109,19 @@ Metrics được lưu mặc định tại:
 outputs/b0_utterance/test_metrics.json
 ```
 
+## Upload Checkpoint
+
+```bash
+hf auth login
+./upload.sh --model b0
+```
+
+Mặc định script upload toàn bộ `outputs/b0_utterance` vào `ngocbao05/ser/b0`. Các version sau có thể dùng cùng repo và đổi folder bằng `--model`:
+
+```bash
+./upload.sh --model b1
+```
+
 ## Inference B0
 
 ```bash
