@@ -121,6 +121,15 @@ Mặc định script upload toàn bộ `outputs/b0_utterance` vào `ngocbao05/se
 ./upload.sh --model b1
 ```
 
+## Download And Evaluate
+
+```bash
+hf auth login
+./download.sh --model b0
+```
+
+Mặc định script tải `ngocbao05/ser/b0` về `outputs/hf_checkpoints/b0`, sau đó evaluate `best.pt` và ghi metrics tại `outputs/hf_checkpoints/b0/test_metrics.json`.
+
 ## Inference B0
 
 ```bash
@@ -138,4 +147,4 @@ Output gồm emotion dự đoán, confidence, và probability từng class.
 - `evaluate_b0.py`: B0 WA, UA, macro F1, WF1, confusion matrix.
 - `infer_b0.py`: B0 single-audio prediction.
 - `metrics.py`: reusable classification metrics cho các baseline sau.
-- `train_b0.sh`, `evaluate_b0.sh`, `infer_b0.sh`: entrypoint kiểu script, chỉnh tham số ở đầu file.
+- `train_b0.sh`, `evaluate_b0.sh`, `infer_b0.sh`, `upload.sh`, `download.sh`: entrypoint kiểu script, chỉnh tham số ở đầu file.

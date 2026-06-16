@@ -5,3 +5,4 @@ __pycache__/
 .jupyter/
 .DS_Store
 iemocap_export/
+outputs/
