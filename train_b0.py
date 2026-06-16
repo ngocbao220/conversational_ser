@@ -11,7 +11,7 @@ from typing import Any, Dict
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AutoFeatureExtractor, get_linear_schedule_with_warmup
+from transformers import AutoFeatureExtractor, get_cosine_schedule_with_warmup, get_linear_schedule_with_warmup
 
 from b0_config import add_b0_model_args, add_dataset_args, add_logging_args, add_training_args, build_b0_config
 from b0_model import B0UtteranceClassifier, build_b0_model
@@ -45,6 +45,22 @@ def save_checkpoint(path: Path, model: B0UtteranceClassifier, config: Dict[str, 
     )
 
 
+def build_scheduler(optimizer: torch.optim.Optimizer, training_cfg: Dict[str, Any], total_steps: int):
+    warmup_steps = int(float(training_cfg.get("warmup_ratio", 0.0)) * total_steps)
+    scheduler_name = str(training_cfg.get("lr_scheduler", "linear"))
+    if scheduler_name == "linear":
+        return get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps)
+    if scheduler_name == "cosine":
+        return get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps)
+    if scheduler_name == "constant":
+        return torch.optim.lr_scheduler.LambdaLR(optimizer, lambda _: 1.0)
+    raise ValueError(f"Unsupported lr_scheduler={scheduler_name!r}.")
+
+
+def warmup_steps(training_cfg: Dict[str, Any], total_steps: int) -> int:
+    return int(float(training_cfg.get("warmup_ratio", 0.0)) * total_steps)
+
+
 def format_epoch_log(epoch_log: Dict[str, Any], learning_rate: float, best_macro_f1: float) -> str:
     validation = epoch_log["validation"]
     return (
@@ -59,10 +75,62 @@ def format_epoch_log(epoch_log: Dict[str, Any], learning_rate: float, best_macro
     )
 
 
+def log_training_session(
+    log_path: Path,
+    config: Dict[str, Any],
+    output_dir: Path,
+    device: torch.device,
+    total_steps: int | None = None,
+) -> None:
+    dataset_cfg = config["dataset"]
+    audio_cfg = config["audio"]
+    b0_cfg = config["baselines"]["b0"]
+    model_cfg = b0_cfg["model"]
+    training_cfg = b0_cfg["training"]
+    logging_cfg = config["logging"]
+
+    lines = [
+        "training_session_start",
+        f"baseline={b0_cfg['name']}",
+        f"output_dir={output_dir}",
+        f"best_checkpoint={output_dir / 'best.pt'}",
+        f"last_checkpoint={output_dir / 'last.pt'}",
+        f"device={device}",
+        f"dataset={dataset_cfg['name']}",
+        f"sampling_rate={audio_cfg['sampling_rate']}",
+        f"max_duration_seconds={audio_cfg['max_duration_seconds']}",
+        f"seed={dataset_cfg['seed']}",
+        f"encoder={model_cfg['encoder_name']}",
+        f"pooling={model_cfg['pooling']}",
+        f"freeze_encoder={model_cfg['freeze_encoder']}",
+        f"hidden_dim={model_cfg['hidden_dim']}",
+        f"dropout={model_cfg['dropout']}",
+        f"batch_size={training_cfg['batch_size']}",
+        f"eval_batch_size={training_cfg['eval_batch_size']}",
+        f"epochs={training_cfg['epochs']}",
+        f"learning_rate={training_cfg['learning_rate']}",
+        f"weight_decay={training_cfg['weight_decay']}",
+        f"lr_scheduler={training_cfg['lr_scheduler']}",
+        f"warmup_ratio={training_cfg['warmup_ratio']}",
+        f"warmup_steps={warmup_steps(training_cfg, total_steps) if total_steps is not None else 'unknown'}",
+        f"gradient_accumulation_steps={training_cfg['gradient_accumulation_steps']}",
+        f"early_stopping_patience={training_cfg['early_stopping_patience']}",
+        f"early_stopping_min_delta={training_cfg['early_stopping_min_delta']}",
+        f"progress_bar={logging_cfg['progress_bar']}",
+        f"use_wandb={logging_cfg['use_wandb']}",
+        f"wandb_project={logging_cfg['wandb_project']}",
+        f"wandb_run_name={logging_cfg['wandb_run_name']}",
+    ]
+    for line in lines:
+        emit_log(log_path, line)
+
+
 def progress_kwargs(logging_cfg: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "leave": False,
         "dynamic_ncols": False,
+        "ncols": int(logging_cfg.get("progress_ncols", 100)),
+        "mininterval": float(logging_cfg.get("progress_mininterval", 2.0)),
         "ascii": True,
         "bar_format": "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]",
     }
@@ -91,9 +159,16 @@ def main() -> None:
     device = resolve_device(str(training_cfg.get("device", "auto")))
     progress_bar = bool(logging_cfg.get("progress_bar", False))
     log_every_steps = int(logging_cfg.get("log_every_steps", 50))
-    append_log_line(log_path, f"start baseline=B0_utterance output_dir={output_dir} device={device}")
-
     datasets = load_iemocap_splits(config)
+    emit_log(
+        log_path,
+        (
+            "dataset_loaded "
+            f"train={len(datasets['train'])} "
+            f"validation={len(datasets['validation'])} "
+            f"test={len(datasets['test'])}"
+        ),
+    )
     feature_extractor = AutoFeatureExtractor.from_pretrained(model_cfg["encoder_name"])
     collator = SERDataCollator(feature_extractor, sampling_rate=int(audio_cfg.get("sampling_rate", 16000)))
 
@@ -125,8 +200,12 @@ def main() -> None:
     epochs = int(training_cfg.get("epochs", 5))
     accumulation_steps = int(training_cfg.get("gradient_accumulation_steps", 1))
     total_steps = max(1, math.ceil(len(train_loader) / accumulation_steps) * epochs)
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
+    scheduler = build_scheduler(optimizer, training_cfg, total_steps)
     criterion = torch.nn.CrossEntropyLoss()
+    early_stopping_patience = int(training_cfg.get("early_stopping_patience", 0))
+    early_stopping_min_delta = float(training_cfg.get("early_stopping_min_delta", 0.0))
+    epochs_without_improvement = 0
+    log_training_session(log_path, config, output_dir, device, total_steps=total_steps)
 
     best_macro_f1 = -1.0
     history = []
@@ -186,7 +265,8 @@ def main() -> None:
             val_loader,
             device,
             progress_bar=progress_bar,
-            description=f"B0 epoch {epoch}/{epochs} validation"
+            description=f"B0 epoch {epoch}/{epochs} validation",
+            progress_ncols=int(logging_cfg.get("progress_ncols", 100)),
         )
         epoch_log = {
             "epoch": epoch,
@@ -199,10 +279,34 @@ def main() -> None:
         log_line = format_epoch_log(epoch_log, current_lr, best_for_log)
         emit_log(log_path, log_line)
 
-        if float(val_metrics["macro_f1"]) > best_macro_f1:
-            best_macro_f1 = float(val_metrics["macro_f1"])
+        save_checkpoint(output_dir / "last.pt", model, config, val_metrics)
+        append_log_line(log_path, f"saved last checkpoint path={output_dir / 'last.pt'}")
+
+        current_macro_f1 = float(val_metrics["macro_f1"])
+        if current_macro_f1 > best_macro_f1 + early_stopping_min_delta:
+            best_macro_f1 = current_macro_f1
+            epochs_without_improvement = 0
             save_checkpoint(output_dir / "best.pt", model, config, val_metrics)
             append_log_line(log_path, f"saved best checkpoint path={output_dir / 'best.pt'} macro_f1={best_macro_f1:.6f}")
+        else:
+            epochs_without_improvement += 1
+            append_log_line(
+                log_path,
+                (
+                    f"no improvement epochs_without_improvement={epochs_without_improvement} "
+                    f"patience={early_stopping_patience}"
+                ),
+            )
+            if early_stopping_patience > 0 and epochs_without_improvement >= early_stopping_patience:
+                emit_log(
+                    log_path,
+                    (
+                        f"early_stopping triggered epoch={epoch} "
+                        f"best_macro_f1={best_macro_f1:.6f} "
+                        f"patience={early_stopping_patience}"
+                    ),
+                )
+                break
 
     (output_dir / "history.json").write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
     (output_dir / "run_config.json").write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -48,6 +48,10 @@ def add_training_args(parser: argparse.ArgumentParser) -> None:
     group.add_argument("--epochs", type=int, default=5)
     group.add_argument("--gradient-accumulation-steps", type=int, default=1)
     group.add_argument("--max-grad-norm", type=float, default=1.0)
+    group.add_argument("--lr-scheduler", choices=["linear", "cosine", "constant"], default="cosine")
+    group.add_argument("--warmup-ratio", type=float, default=0.1)
+    group.add_argument("--early-stopping-patience", type=int, default=0)
+    group.add_argument("--early-stopping-min-delta", type=float, default=0.0)
     group.add_argument("--num-workers", type=int, default=4)
     group.add_argument("--device", default="auto")
 
@@ -113,6 +117,10 @@ def build_b0_config(args: argparse.Namespace) -> Dict[str, Any]:
                     "epochs": args.epochs,
                     "gradient_accumulation_steps": args.gradient_accumulation_steps,
                     "max_grad_norm": args.max_grad_norm,
+                    "lr_scheduler": args.lr_scheduler,
+                    "warmup_ratio": args.warmup_ratio,
+                    "early_stopping_patience": args.early_stopping_patience,
+                    "early_stopping_min_delta": args.early_stopping_min_delta,
                     "num_workers": args.num_workers,
                     "device": args.device,
                 },
@@ -120,6 +128,8 @@ def build_b0_config(args: argparse.Namespace) -> Dict[str, Any]:
         },
         "logging": {
             "progress_bar": args.progress_bar,
+            "progress_ncols": args.progress_ncols,
+            "progress_mininterval": args.progress_mininterval,
             "log_every_steps": args.log_every_steps,
             "log_file": args.log_file,
             "use_wandb": args.use_wandb,

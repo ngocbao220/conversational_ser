@@ -57,13 +57,23 @@ POOLING="mean"
 FREEZE_ENCODER=true
 BATCH_SIZE=4
 EPOCHS=5
+LR_SCHEDULER="cosine"
+WARMUP_RATIO=0.1
+EARLY_STOPPING_PATIENCE=0
+PROGRESS_NCOLS=100
 ```
 
-Checkpoint tốt nhất theo validation macro F1 được lưu ở:
+Checkpoint được lưu theo 2 kiểu:
 
 ```text
 outputs/b0_utterance/best.pt
+outputs/b0_utterance/last.pt
 ```
+
+- `best.pt`: epoch tốt nhất theo validation macro F1.
+- `last.pt`: checkpoint mới nhất sau mỗi epoch.
+- `EARLY_STOPPING_PATIENCE=0` nghĩa là tắt early stopping.
+- `LR_SCHEDULER` hỗ trợ `linear`, `cosine`, `constant`.
 
 Log dễ đọc được append dần vào `outputs/b0_utterance/train.log`, phù hợp để quan sát bằng:
 

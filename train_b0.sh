@@ -25,17 +25,23 @@ DROPOUT=0.2
 HIDDEN_DIM=256
 
 OUTPUT_DIR="outputs/b0_utterance"
-BATCH_SIZE=64
+BATCH_SIZE=16
 EVAL_BATCH_SIZE=8
 LEARNING_RATE=0.0001
 WEIGHT_DECAY=0.01
 EPOCHS=50
 GRADIENT_ACCUMULATION_STEPS=1
 MAX_GRAD_NORM=1.0
-NUM_WORKERS=4
+LR_SCHEDULER="cosine"   # linear, cosine, constant
+WARMUP_RATIO=0.1
+EARLY_STOPPING_PATIENCE=0  # 0 disables early stopping
+EARLY_STOPPING_MIN_DELTA=0.0
+NUM_WORKERS=2
 DEVICE="cuda"
 
 PROGRESS_BAR=true
+PROGRESS_NCOLS=100
+PROGRESS_MININTERVAL=2.0
 LOG_EVERY_STEPS=50
 LOG_FILE="train.log"
 
@@ -70,9 +76,15 @@ ARGS=(
   --epochs "$EPOCHS"
   --gradient-accumulation-steps "$GRADIENT_ACCUMULATION_STEPS"
   --max-grad-norm "$MAX_GRAD_NORM"
+  --lr-scheduler "$LR_SCHEDULER"
+  --warmup-ratio "$WARMUP_RATIO"
+  --early-stopping-patience "$EARLY_STOPPING_PATIENCE"
+  --early-stopping-min-delta "$EARLY_STOPPING_MIN_DELTA"
   --num-workers "$NUM_WORKERS"
   --device "$DEVICE"
   --progress-bar "$PROGRESS_BAR"
+  --progress-ncols "$PROGRESS_NCOLS"
+  --progress-mininterval "$PROGRESS_MININTERVAL"
   --log-every-steps "$LOG_EVERY_STEPS"
   --log-file "$LOG_FILE"
   --use-wandb "$USE_WANDB"
