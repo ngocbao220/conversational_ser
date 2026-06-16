@@ -11,7 +11,7 @@ from typing import Any, Dict
 import torch
 import yaml
 from torch.utils.data import DataLoader
-from tqdm.auto import tqdm
+from tqdm import tqdm
 from transformers import AutoFeatureExtractor, get_linear_schedule_with_warmup
 
 from b0_model import B0UtteranceClassifier, build_b0_model
@@ -24,6 +24,11 @@ def append_log_line(log_path: Path, message: str) -> None:
     with log_path.open("a", encoding="utf-8") as handle:
         handle.write(f"[{timestamp}] {message}\n")
         handle.flush()
+
+
+def emit_log(log_path: Path, message: str) -> None:
+    print(message, flush=True)
+    append_log_line(log_path, message)
 
 
 def save_checkpoint(path: Path, model: B0UtteranceClassifier, config: Dict[str, Any], metrics: Dict[str, Any]) -> None:
@@ -54,6 +59,17 @@ def format_epoch_log(epoch_log: Dict[str, Any], learning_rate: float, best_macro
     )
 
 
+def progress_kwargs(logging_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "leave": False,
+        "dynamic_ncols": False,
+        "ncols": int(logging_cfg.get("progress_ncols", 100)),
+        "mininterval": float(logging_cfg.get("progress_mininterval", 2.0)),
+        "ascii": True,
+        "bar_format": "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]",
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train B0 utterance-level SER baseline.")
     parser.add_argument("--config", default="config.yaml")
@@ -74,7 +90,8 @@ def main() -> None:
     log_path.write_text("", encoding="utf-8")
 
     device = resolve_device(str(training_cfg.get("device", "auto")))
-    progress_bar = bool(logging_cfg.get("progress_bar", True))
+    progress_bar = bool(logging_cfg.get("progress_bar", False))
+    log_every_steps = int(logging_cfg.get("log_every_steps", 50))
     append_log_line(log_path, f"start baseline=B0_utterance output_dir={output_dir} device={device}")
 
     datasets = load_iemocap_splits(config)
@@ -123,8 +140,8 @@ def main() -> None:
         train_iterator = tqdm(
             train_loader,
             desc=f"B0 epoch {epoch}/{epochs} train",
-            leave=True,
             disable=not progress_bar,
+            **progress_kwargs(logging_cfg),
         )
         for step, batch in enumerate(train_iterator, start=1):
             labels = batch["labels"].to(device)
@@ -137,7 +154,21 @@ def main() -> None:
             loss.backward()
             loss_value = float(loss.item() * accumulation_steps)
             train_losses.append(loss_value)
-            train_iterator.set_postfix(loss=f"{loss_value:.4f}", lr=f"{scheduler.get_last_lr()[0]:.2e}")
+            current_lr = scheduler.get_last_lr()[0]
+            if progress_bar:
+                train_iterator.set_postfix(loss=f"{loss_value:.4f}", lr=f"{current_lr:.2e}")
+            elif log_every_steps > 0 and (step == 1 or step % log_every_steps == 0 or step == len(train_loader)):
+                recent_losses = train_losses[-log_every_steps:] if log_every_steps > 0 else train_losses
+                mean_recent_loss = sum(recent_losses) / max(len(recent_losses), 1)
+                emit_log(
+                    log_path,
+                    (
+                        f"epoch={epoch}/{epochs} "
+                        f"step={step}/{len(train_loader)} "
+                        f"loss={mean_recent_loss:.6f} "
+                        f"lr={current_lr:.6e}"
+                    ),
+                )
 
             if step % accumulation_steps == 0:
                 torch.nn.utils.clip_grad_norm_(trainable_parameters, float(training_cfg.get("max_grad_norm", 1.0)))
@@ -157,6 +188,7 @@ def main() -> None:
             device,
             progress_bar=progress_bar,
             description=f"B0 epoch {epoch}/{epochs} validation",
+            progress_ncols=int(logging_cfg.get("progress_ncols", 100)),
         )
         epoch_log = {
             "epoch": epoch,
@@ -167,8 +199,7 @@ def main() -> None:
         current_lr = scheduler.get_last_lr()[0]
         best_for_log = max(best_macro_f1, float(val_metrics["macro_f1"]))
         log_line = format_epoch_log(epoch_log, current_lr, best_for_log)
-        print(log_line)
-        append_log_line(log_path, log_line)
+        emit_log(log_path, log_line)
 
         if float(val_metrics["macro_f1"]) > best_macro_f1:
             best_macro_f1 = float(val_metrics["macro_f1"])

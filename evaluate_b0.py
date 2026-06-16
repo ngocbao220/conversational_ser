@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import yaml
 from torch.utils.data import DataLoader
-from tqdm.auto import tqdm
+from tqdm import tqdm
 from transformers import AutoFeatureExtractor
 
 from b0_model import build_b0_model
@@ -33,13 +33,24 @@ def predict_batches(
     device: torch.device,
     progress_bar: bool = False,
     description: Optional[str] = None,
+    progress_ncols: int = 100,
 ) -> Tuple[np.ndarray, np.ndarray, float]:
     model.eval()
     losses = []
     predictions = []
     targets = []
     criterion = torch.nn.CrossEntropyLoss()
-    iterator = tqdm(dataloader, desc=description or "Evaluating", leave=False, disable=not progress_bar)
+    iterator = tqdm(
+        dataloader,
+        desc=description or "Evaluating",
+        leave=False,
+        dynamic_ncols=False,
+        ncols=progress_ncols,
+        mininterval=2.0,
+        ascii=True,
+        bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
+        disable=not progress_bar,
+    )
 
     with torch.no_grad():
         for batch in iterator:
@@ -64,8 +75,9 @@ def evaluate_model(
     device: torch.device,
     progress_bar: bool = False,
     description: Optional[str] = None,
+    progress_ncols: int = 100,
 ) -> Dict[str, object]:
-    predictions, targets, loss = predict_batches(model, dataloader, device, progress_bar, description)
+    predictions, targets, loss = predict_batches(model, dataloader, device, progress_bar, description, progress_ncols)
     metrics = classification_metrics(predictions, targets, CANONICAL_LABELS)
     metrics["loss"] = loss
     return metrics
@@ -112,8 +124,9 @@ def main() -> None:
         model,
         dataloader,
         device,
-        progress_bar=bool(config.get("logging", {}).get("progress_bar", True)),
+        progress_bar=bool(config.get("logging", {}).get("progress_bar", False)),
         description=f"B0 {args.split}",
+        progress_ncols=int(config.get("logging", {}).get("progress_ncols", 100)),
     )
 
     output_path = Path(args.output or b0_cfg.get("metrics_path", f"outputs/b0_utterance/{args.split}_metrics.json"))

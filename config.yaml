@@ -38,6 +38,9 @@ baselines:
 
 logging:
   progress_bar: true
+  progress_ncols: 100
+  progress_mininterval: 2.0
+  log_every_steps: 50
   log_file: train.log
   use_wandb: true
   wandb_project: conversational-SER
