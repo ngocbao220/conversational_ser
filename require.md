@@ -31,7 +31,7 @@ Default B0 configuration:
 
 Evaluation:
 - Compare predicted emotion with mapped gold label.
-- Compute accuracy, macro F1, weighted F1, and confusion matrix.
+- Compute WA, UA, macro F1, WF1, and confusion matrix.
 - Save metrics under `outputs/b0_utterance/`.
 
 Code structure:

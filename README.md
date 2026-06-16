@@ -123,7 +123,7 @@ Output gồm emotion dự đoán, confidence, và probability từng class.
 - `b0_model.py`: B0 frozen SSL encoder + mean/attention pooling + MLP classifier.
 - `features.py`: acoustic cues cho explanation.
 - `train_b0.py`: B0 training loop, validation metrics, best checkpoint theo macro F1.
-- `evaluate_b0.py`: B0 accuracy, macro F1, weighted F1, confusion matrix.
+- `evaluate_b0.py`: B0 WA, UA, macro F1, WF1, confusion matrix.
 - `infer_b0.py`: B0 single-audio prediction.
 - `metrics.py`: reusable classification metrics cho các baseline sau.
 - `train_b0.sh`, `evaluate_b0.sh`, `infer_b0.sh`: entrypoint kiểu script, chỉnh tham số ở đầu file.

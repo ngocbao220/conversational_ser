@@ -67,9 +67,10 @@ def format_epoch_log(epoch_log: Dict[str, Any], learning_rate: float, best_macro
         f"epoch={epoch_log['epoch']} "
         f"train_loss={epoch_log['train_loss']:.6f} "
         f"val_loss={validation['loss']:.6f} "
-        f"val_acc={validation['accuracy']:.6f} "
+        f"val_WA={validation['WA']:.6f} "
+        f"val_UA={validation['UA']:.6f} "
         f"val_macro_f1={validation['macro_f1']:.6f} "
-        f"val_weighted_f1={validation['weighted_f1']:.6f} "
+        f"val_WF1={validation['WF1']:.6f} "
         f"best_macro_f1={best_macro_f1:.6f} "
         f"lr={learning_rate:.6e}"
     )
@@ -103,8 +104,14 @@ def wandb_epoch_payload(epoch_log: Dict[str, Any], learning_rate: float, best_ma
         "train/learning_rate": float(learning_rate),
         "validation/loss": float(validation["loss"]),
         "validation/accuracy": float(validation["accuracy"]),
+        "validation/wa": float(validation["wa"]),
+        "validation/ua": float(validation["ua"]),
+        "validation/uar": float(validation["uar"]),
+        "validation/WA": float(validation["WA"]),
+        "validation/UA": float(validation["UA"]),
         "validation/macro_f1": float(validation["macro_f1"]),
         "validation/weighted_f1": float(validation["weighted_f1"]),
+        "validation/WF1": float(validation["WF1"]),
         "best/macro_f1": float(best_macro_f1),
     }
 
