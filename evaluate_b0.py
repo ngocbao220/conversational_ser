@@ -92,7 +92,6 @@ def main() -> None:
     parser.add_argument("--eval-batch-size", type=int, default=None)
     parser.add_argument("--num-workers", type=int, default=None)
     parser.add_argument("--progress-bar", type=str_to_bool, default=None)
-    parser.add_argument("--progress-ncols", type=int, default=None)
     add_dataset_args(parser)
     args = parser.parse_args()
 

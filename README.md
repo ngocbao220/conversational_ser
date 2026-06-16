@@ -60,7 +60,6 @@ EPOCHS=5
 LR_SCHEDULER="cosine"
 WARMUP_RATIO=0.1
 EARLY_STOPPING_PATIENCE=0
-PROGRESS_NCOLS=100
 ```
 
 Checkpoint được lưu theo 2 kiểu:

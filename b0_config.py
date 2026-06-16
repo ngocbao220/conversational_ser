@@ -59,7 +59,6 @@ def add_training_args(parser: argparse.ArgumentParser) -> None:
 def add_logging_args(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("logging")
     group.add_argument("--progress-bar", type=str_to_bool, default=True)
-    group.add_argument("--progress-ncols", type=int, default=100)
     group.add_argument("--progress-mininterval", type=float, default=2.0)
     group.add_argument("--log-every-steps", type=int, default=50)
     group.add_argument("--log-file", default="train.log")
@@ -128,7 +127,6 @@ def build_b0_config(args: argparse.Namespace) -> Dict[str, Any]:
         },
         "logging": {
             "progress_bar": args.progress_bar,
-            "progress_ncols": args.progress_ncols,
             "progress_mininterval": args.progress_mininterval,
             "log_every_steps": args.log_every_steps,
             "log_file": args.log_file,

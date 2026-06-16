@@ -134,7 +134,7 @@ if [[ "$PRIVATE" == "true" ]]; then
   CREATE_ARGS+=(--private)
 fi
 
-hf repos create "$HF_REPO_ID" "${CREATE_ARGS[@]}" --exist-ok
+hf repo create "$HF_REPO_ID" "${CREATE_ARGS[@]}" --exist-ok
 
 echo "Uploading $OUTPUT_DIR to Hugging Face repo $HF_REPO_ID:$PATH_IN_REPO"
 hf upload \

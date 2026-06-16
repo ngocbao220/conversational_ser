@@ -40,7 +40,6 @@ NUM_WORKERS=2
 DEVICE="cuda"
 
 PROGRESS_BAR=true
-PROGRESS_NCOLS=100
 PROGRESS_MININTERVAL=2.0
 LOG_EVERY_STEPS=50
 LOG_FILE="train.log"
@@ -83,7 +82,6 @@ ARGS=(
   --num-workers "$NUM_WORKERS"
   --device "$DEVICE"
   --progress-bar "$PROGRESS_BAR"
-  --progress-ncols "$PROGRESS_NCOLS"
   --progress-mininterval "$PROGRESS_MININTERVAL"
   --log-every-steps "$LOG_EVERY_STEPS"
   --log-file "$LOG_FILE"
