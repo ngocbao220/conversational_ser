@@ -25,7 +25,6 @@ MAX_TEST_SAMPLES=""
 EVAL_BATCH_SIZE=8
 NUM_WORKERS=4
 PROGRESS_BAR=true
-PROGRESS_NCOLS=100
 
 # =========================
 # Do not edit below
@@ -46,7 +45,6 @@ ARGS=(
   --eval-batch-size "$EVAL_BATCH_SIZE"
   --num-workers "$NUM_WORKERS"
   --progress-bar "$PROGRESS_BAR"
-  --progress-ncols "$PROGRESS_NCOLS"
 )
 
 if [[ -n "$MAX_TRAIN_SAMPLES" ]]; then

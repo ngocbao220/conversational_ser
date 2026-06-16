@@ -32,8 +32,7 @@ def predict_batches(
     dataloader: Iterable[Mapping[str, torch.Tensor]],
     device: torch.device,
     progress_bar: bool = False,
-    description: Optional[str] = None,
-    progress_ncols: int = 100,
+    description: Optional[str] = None
 ) -> Tuple[np.ndarray, np.ndarray, float]:
     model.eval()
     losses = []
@@ -45,8 +44,6 @@ def predict_batches(
         desc=description or "Evaluating",
         leave=False,
         dynamic_ncols=False,
-        ncols=progress_ncols,
-        mininterval=2.0,
         ascii=True,
         bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
         disable=not progress_bar,
@@ -74,10 +71,9 @@ def evaluate_model(
     dataloader: Iterable[Mapping[str, torch.Tensor]],
     device: torch.device,
     progress_bar: bool = False,
-    description: Optional[str] = None,
-    progress_ncols: int = 100,
+    description: Optional[str] = None
 ) -> Dict[str, object]:
-    predictions, targets, loss = predict_batches(model, dataloader, device, progress_bar, description, progress_ncols)
+    predictions, targets, loss = predict_batches(model, dataloader, device, progress_bar, description)
     metrics = classification_metrics(predictions, targets, CANONICAL_LABELS)
     metrics["loss"] = loss
     return metrics
@@ -135,7 +131,6 @@ def main() -> None:
     eval_batch_size = int(args.eval_batch_size or training_cfg.get("eval_batch_size", 8))
     num_workers = int(args.num_workers if args.num_workers is not None else training_cfg.get("num_workers", 0))
     progress_bar = bool(args.progress_bar if args.progress_bar is not None else config.get("logging", {}).get("progress_bar", True))
-    progress_ncols = int(args.progress_ncols or config.get("logging", {}).get("progress_ncols", 100))
 
     datasets = load_iemocap_splits(config)
     feature_extractor = AutoFeatureExtractor.from_pretrained(model_cfg["encoder_name"])
@@ -155,8 +150,7 @@ def main() -> None:
         dataloader,
         device,
         progress_bar=progress_bar,
-        description=f"B0 {args.split}",
-        progress_ncols=progress_ncols,
+        description=f"B0 {args.split}"
     )
 
     output_path = Path(args.output or b0_cfg.get("metrics_path", f"outputs/b0_utterance/{args.split}_metrics.json"))

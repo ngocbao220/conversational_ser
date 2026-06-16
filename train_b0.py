@@ -63,8 +63,6 @@ def progress_kwargs(logging_cfg: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "leave": False,
         "dynamic_ncols": False,
-        "ncols": int(logging_cfg.get("progress_ncols", 100)),
-        "mininterval": float(logging_cfg.get("progress_mininterval", 2.0)),
         "ascii": True,
         "bar_format": "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]",
     }
@@ -188,8 +186,7 @@ def main() -> None:
             val_loader,
             device,
             progress_bar=progress_bar,
-            description=f"B0 epoch {epoch}/{epochs} validation",
-            progress_ncols=int(logging_cfg.get("progress_ncols", 100)),
+            description=f"B0 epoch {epoch}/{epochs} validation"
         )
         epoch_log = {
             "epoch": epoch,

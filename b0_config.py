@@ -120,8 +120,6 @@ def build_b0_config(args: argparse.Namespace) -> Dict[str, Any]:
         },
         "logging": {
             "progress_bar": args.progress_bar,
-            "progress_ncols": args.progress_ncols,
-            "progress_mininterval": args.progress_mininterval,
             "log_every_steps": args.log_every_steps,
             "log_file": args.log_file,
             "use_wandb": args.use_wandb,

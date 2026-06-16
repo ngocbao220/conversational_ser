@@ -57,7 +57,6 @@ POOLING="mean"
 FREEZE_ENCODER=true
 BATCH_SIZE=4
 EPOCHS=5
-PROGRESS_NCOLS=100
 ```
 
 Checkpoint tốt nhất theo validation macro F1 được lưu ở:
