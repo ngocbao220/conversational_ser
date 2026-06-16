@@ -12,33 +12,38 @@ audio:
   sampling_rate: 16000
   max_duration_seconds: 12.0
 
-model:
-  encoder_name: microsoft/wavlm-base
-  pooling: mean   # mean or attention
-  freeze_encoder: true
-  dropout: 0.2
-  hidden_dim: 256
-
-training:
-  output_dir: outputs/ser_baseline
-  batch_size: 4
-  eval_batch_size: 8
-  learning_rate: 0.0001
-  weight_decay: 0.01
-  epochs: 5
-  gradient_accumulation_steps: 1
-  max_grad_norm: 1.0
-  num_workers: 0
-  device: auto
+baselines:
+  b0:
+    name: B0_utterance
+    description: utterance audio -> frozen SSL encoder -> pooling -> classifier -> emotion
+    checkpoint_path: outputs/b0_utterance/best.pt
+    metrics_path: outputs/b0_utterance/test_metrics.json
+    model:
+      encoder_name: microsoft/wavlm-base
+      pooling: mean   # mean or attention
+      freeze_encoder: true
+      dropout: 0.2
+      hidden_dim: 256
+    training:
+      output_dir: outputs/b0_utterance
+      batch_size: 4
+      eval_batch_size: 8
+      learning_rate: 0.0001
+      weight_decay: 0.01
+      epochs: 5
+      gradient_accumulation_steps: 1
+      max_grad_norm: 1.0
+      num_workers: 4
+      device: auto
 
 logging:
   progress_bar: true
   log_file: train.log
-  use_wandb: false
-  wandb_project: ser-baseline
-  wandb_run_name: null
+  use_wandb: true
+  wandb_project: conversational-SER
+  wandb_run_name: "baseline"
   wandb_entity: null
   wandb_mode: online
 
 inference:
-  checkpoint_path: outputs/ser_baseline/best.pt
+  checkpoint_path: outputs/b0_utterance/best.pt

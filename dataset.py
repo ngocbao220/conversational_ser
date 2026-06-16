@@ -109,14 +109,21 @@ def _audio_array(example: Mapping[str, Any]) -> np.ndarray:
     return np.asarray(array, dtype=np.float32)
 
 
+def to_mono(audio: np.ndarray) -> np.ndarray:
+    audio = np.asarray(audio, dtype=np.float32)
+    if audio.ndim <= 1:
+        return audio
+    if audio.shape[0] <= 8 and audio.shape[1] > audio.shape[0]:
+        return np.mean(audio, axis=0)
+    return np.mean(audio, axis=1)
+
+
 def prepare_example(example: Dict[str, Any], max_audio_length: Optional[int] = None) -> Optional[Dict[str, Any]]:
     label = get_canonical_label(example)
     if label is None:
         return None
 
-    audio = _audio_array(example)
-    if audio.ndim > 1:
-        audio = np.mean(audio, axis=0)
+    audio = to_mono(_audio_array(example))
     if max_audio_length is not None and audio.shape[0] > max_audio_length:
         audio = audio[:max_audio_length]
 

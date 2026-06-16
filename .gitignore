@@ -1,1 +1,7 @@
-.outputs/
+.env
+outputs/
+__pycache__/
+*.pyc
+.jupyter/
+.DS_Store
+iemocap_export/
