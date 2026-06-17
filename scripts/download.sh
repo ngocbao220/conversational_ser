@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+
 # =========================
 # Hugging Face download + eval parameters
 # =========================
@@ -29,6 +33,8 @@ EVAL_OUTPUT="${EVAL_OUTPUT:-$LOCAL_MODEL_DIR/${SPLIT}_metrics.json}"
 DEVICE="${DEVICE:-auto}"
 
 DATASET_NAME="${DATASET_NAME:-AbstractTTS/IEMOCAP}"
+SPLIT_STRATEGY="${SPLIT_STRATEGY:-}"
+TEST_SESSION="${TEST_SESSION:-Ses05}"
 SAMPLING_RATE="${SAMPLING_RATE:-16000}"
 MAX_DURATION_SECONDS="${MAX_DURATION_SECONDS:-12.0}"
 VALIDATION_SIZE="${VALIDATION_SIZE:-0.1}"
@@ -59,6 +65,8 @@ Environment overrides:
   HF_REPO_ID=ngocbao05/ser
   PATH_IN_REPO=b0
   DOWNLOAD_ROOT=outputs/hf_checkpoints
+  SPLIT_STRATEGY=random
+  TEST_SESSION=Ses05
   RUN_EVAL=true
   SPLIT=test
   DEVICE=auto
@@ -194,6 +202,17 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "$SPLIT_STRATEGY" ]]; then
+  case "$MODEL_NAME" in
+    b01)
+      SPLIT_STRATEGY="loso"
+      ;;
+    *)
+      SPLIT_STRATEGY="random"
+      ;;
+  esac
+fi
+
 if ! command -v hf >/dev/null 2>&1; then
   echo "hf CLI not found. Install with: python -m pip install huggingface_hub" >&2
   exit 1
@@ -236,6 +255,8 @@ EVAL_ARGS=(
   --output "$EVAL_OUTPUT"
   --device "$DEVICE"
   --dataset-name "$DATASET_NAME"
+  --split-strategy "$SPLIT_STRATEGY"
+  --test-session "$TEST_SESSION"
   --sampling-rate "$SAMPLING_RATE"
   --max-duration-seconds "$MAX_DURATION_SECONDS"
   --validation-size "$VALIDATION_SIZE"
@@ -258,4 +279,4 @@ if [[ -n "$MAX_TEST_SAMPLES" ]]; then
 fi
 
 echo "Evaluating checkpoint on split=$SPLIT"
-python evaluate_b0.py "${EVAL_ARGS[@]}"
+python -m scripts.evaluate_b0 "${EVAL_ARGS[@]}"

@@ -35,14 +35,21 @@ Evaluation:
 - Save metrics under `outputs/b0_utterance/`.
 
 Code structure:
-- `dataset.py`: dataset loading, label mapping, collator.
-- `b0_model.py`: B0 model definition.
-- `train_b0.py`: B0 training loop.
-- `evaluate_b0.py`: B0 evaluation.
-- `infer_b0.py`: single-audio inference for B0.
-- `metrics.py`: reusable metrics for future baselines.
-- `train_b0.sh`, `evaluate_b0.sh`, `infer_b0.sh`: script entrypoints with editable parameters at the top.
+- `models/b0.py`: B0 model definition.
+- `utils/dataset.py`: dataset loading, label mapping, collator.
+- `utils/config.py`: CLI/config helpers.
+- `utils/metrics.py`: reusable metrics for future baselines.
+- `scripts/train_b0.py`: B0 training loop.
+- `scripts/evaluate_b0.py`: B0 evaluation.
+- `scripts/infer_b0.py`: single-audio inference for B0.
+- `scripts/train_b0.sh`, `scripts/evaluate_b0.sh`, `scripts/infer_b0.sh`: script entrypoints with editable parameters at the top.
 
 Keep future baselines isolated:
 - Add new model/training files for B1, B2, etc.
 - Keep B0 stable as the mandatory reference baseline.
+
+B01:
+- Same architecture family as B0.
+- Unfreeze the last 4 SSL encoder transformer layers.
+- Use LOSO split: train Ses01-Ses04, test Ses05.
+- Entry points: `scripts/train_b01.sh`, `scripts/evaluate_b01.sh`.

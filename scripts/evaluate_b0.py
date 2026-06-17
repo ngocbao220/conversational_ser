@@ -11,10 +11,10 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoFeatureExtractor
 
-from b0_config import add_dataset_args, str_to_bool
-from b0_model import build_b0_model
-from dataset import CANONICAL_LABELS, SERDataCollator, load_iemocap_splits
-from metrics import classification_metrics
+from models.b0 import build_b0_model
+from utils.config import add_dataset_args, str_to_bool
+from utils.dataset import CANONICAL_LABELS, SERDataCollator, load_iemocap_splits
+from utils.metrics import classification_metrics
 
 
 def resolve_device(name: str) -> torch.device:
@@ -104,6 +104,8 @@ def main() -> None:
             "name": args.dataset_name,
             "validation_size": args.validation_size,
             "test_size": args.test_size,
+            "split_strategy": args.split_strategy,
+            "test_session": args.test_session,
             "seed": args.seed,
             "num_proc": args.num_proc,
         }

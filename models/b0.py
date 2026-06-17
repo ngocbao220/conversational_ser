@@ -13,6 +13,7 @@ class B0ModelConfig:
     encoder_name: str = "microsoft/wavlm-base"
     pooling: str = "mean"
     freeze_encoder: bool = True
+    trainable_encoder_layers: int = 0
     dropout: float = 0.2
     hidden_dim: int = 256
     num_labels: int = 4
@@ -46,6 +47,8 @@ class B0UtteranceClassifier(nn.Module):
         if config.freeze_encoder:
             for parameter in self.encoder.parameters():
                 parameter.requires_grad = False
+            self._unfreeze_last_encoder_layers(config.trainable_encoder_layers)
+        self.encoder_fully_frozen = not any(parameter.requires_grad for parameter in self.encoder.parameters())
 
         if config.pooling == "attention":
             self.pooler = AttentionPooling(self.hidden_size)
@@ -85,7 +88,7 @@ class B0UtteranceClassifier(nn.Module):
         return summed / counts
 
     def forward(self, input_values: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-        if self.config.freeze_encoder:
+        if self.encoder_fully_frozen:
             with torch.no_grad():
                 outputs = self.encoder(input_values=input_values, attention_mask=attention_mask)
         else:
@@ -99,12 +102,28 @@ class B0UtteranceClassifier(nn.Module):
             pooled = self._mean_pool(hidden_states, feature_mask)
         return self.classifier(pooled)
 
+    def _unfreeze_last_encoder_layers(self, num_layers: int) -> None:
+        if num_layers <= 0:
+            return
+
+        layers = getattr(getattr(self.encoder, "encoder", None), "layers", None)
+        if layers is None:
+            raise ValueError(
+                f"Cannot find transformer encoder layers for {self.config.encoder_name!r}; "
+                "set trainable_encoder_layers=0 or update layer lookup."
+            )
+
+        for layer in layers[-num_layers:]:
+            for parameter in layer.parameters():
+                parameter.requires_grad = True
+
 
 def build_b0_model(model_cfg: dict, num_labels: int) -> B0UtteranceClassifier:
     config = B0ModelConfig(
         encoder_name=str(model_cfg.get("encoder_name", "microsoft/wavlm-base")),
         pooling=str(model_cfg.get("pooling", "mean")),
         freeze_encoder=bool(model_cfg.get("freeze_encoder", True)),
+        trainable_encoder_layers=int(model_cfg.get("trainable_encoder_layers", 0)),
         dropout=float(model_cfg.get("dropout", 0.2)),
         hidden_dim=int(model_cfg.get("hidden_dim", 256)),
         num_labels=num_labels,

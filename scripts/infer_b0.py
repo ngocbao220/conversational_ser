@@ -10,9 +10,9 @@ import soundfile as sf
 import torch
 from transformers import AutoFeatureExtractor
 
-from b0_model import build_b0_model
-from dataset import CANONICAL_LABELS, ID2LABEL
-from evaluate_b0 import load_checkpoint, resolve_device
+from models.b0 import build_b0_model
+from scripts.evaluate_b0 import load_checkpoint, resolve_device
+from utils.dataset import CANONICAL_LABELS, ID2LABEL
 
 
 def load_audio(path: str | Path) -> tuple[np.ndarray, int]:

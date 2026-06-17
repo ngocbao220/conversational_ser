@@ -20,6 +20,8 @@ def add_dataset_args(parser: argparse.ArgumentParser) -> None:
     group.add_argument("--dataset-name", default="AbstractTTS/IEMOCAP")
     group.add_argument("--validation-size", type=float, default=0.1)
     group.add_argument("--test-size", type=float, default=0.1)
+    group.add_argument("--split-strategy", choices=["random", "loso"], default="random")
+    group.add_argument("--test-session", default="Ses05")
     group.add_argument("--seed", type=int, default=42)
     group.add_argument("--num-proc", type=int, default=1)
     group.add_argument("--max-train-samples", type=int, default=None)
@@ -31,9 +33,11 @@ def add_dataset_args(parser: argparse.ArgumentParser) -> None:
 
 def add_b0_model_args(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("model")
+    group.add_argument("--baseline-name", default="B0_utterance")
     group.add_argument("--encoder-name", default="microsoft/wavlm-base")
     group.add_argument("--pooling", choices=["mean", "attention"], default="mean")
     group.add_argument("--freeze-encoder", type=str_to_bool, default=True)
+    group.add_argument("--trainable-encoder-layers", type=int, default=0)
     group.add_argument("--dropout", type=float, default=0.2)
     group.add_argument("--hidden-dim", type=int, default=256)
 
@@ -77,6 +81,8 @@ def build_b0_config(args: argparse.Namespace) -> Dict[str, Any]:
         "test_split": "test",
         "validation_size": args.validation_size,
         "test_size": args.test_size,
+        "split_strategy": args.split_strategy,
+        "test_session": args.test_session,
         "seed": args.seed,
         "num_proc": args.num_proc,
     }
@@ -88,6 +94,7 @@ def build_b0_config(args: argparse.Namespace) -> Dict[str, Any]:
     dataset_cfg.update({key: value for key, value in optional_limits.items() if value is not None})
 
     output_dir = args.output_dir
+    baseline_name = args.baseline_name
     return {
         "dataset": dataset_cfg,
         "audio": {
@@ -96,7 +103,7 @@ def build_b0_config(args: argparse.Namespace) -> Dict[str, Any]:
         },
         "baselines": {
             "b0": {
-                "name": "B0_utterance",
+                "name": baseline_name,
                 "description": "utterance audio -> frozen SSL encoder -> pooling -> classifier -> emotion",
                 "checkpoint_path": f"{output_dir}/best.pt",
                 "metrics_path": f"{output_dir}/test_metrics.json",
@@ -104,6 +111,7 @@ def build_b0_config(args: argparse.Namespace) -> Dict[str, Any]:
                     "encoder_name": args.encoder_name,
                     "pooling": args.pooling,
                     "freeze_encoder": args.freeze_encoder,
+                    "trainable_encoder_layers": args.trainable_encoder_layers,
                     "dropout": args.dropout,
                     "hidden_dim": args.hidden_dim,
                 },

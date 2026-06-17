@@ -46,10 +46,10 @@ Mặc định B0 dùng `microsoft/wavlm-base`, frozen encoder, mean pooling, MLP
 ## Train B0
 
 ```bash
-./train_b0.sh
+./scripts/train_b0.sh
 ```
 
-Các tham số train nằm ở đầu [train_b0.sh](/Users/ngocbao/Documents/Document/research/main/speech/exps/demo/train_b0.sh), ví dụ:
+Các tham số train nằm ở đầu [scripts/train_b0.sh](/Users/ngocbao/Documents/Document/research/main/speech/exps/demo/scripts/train_b0.sh), ví dụ:
 
 ```bash
 ENCODER_NAME="microsoft/wavlm-base"
@@ -82,7 +82,7 @@ tail -f outputs/b0_utterance/train.log
 
 Toàn bộ history theo epoch được lưu vào `outputs/b0_utterance/history.json` sau khi train xong.
 
-Muốn bật Weights & Biases, sửa trong `train_b0.sh`:
+Muốn bật Weights & Biases, sửa trong `scripts/train_b0.sh`:
 
 ```bash
 USE_WANDB=true
@@ -99,7 +99,7 @@ wandb login
 ## Evaluate B0
 
 ```bash
-./evaluate_b0.sh
+./scripts/evaluate_b0.sh
 ```
 
 Metrics được lưu mặc định tại:
@@ -108,24 +108,42 @@ Metrics được lưu mặc định tại:
 outputs/b0_utterance/test_metrics.json
 ```
 
+## B01 - LOSO + Unfreeze 4 SSL Layers
+
+B01 dùng cùng classifier với B0, nhưng:
+
+- `TRAINABLE_ENCODER_LAYERS=4`: unfreeze 4 transformer layer cuối của SSL encoder.
+- `SPLIT_STRATEGY="loso"` và `TEST_SESSION="Ses05"`: train trên Ses01-Ses04, test trên Ses05.
+
+```bash
+./scripts/train_b01.sh
+./scripts/evaluate_b01.sh
+```
+
+Output mặc định:
+
+```text
+outputs/b01_loso_unfreeze4/
+```
+
 ## Upload Checkpoint
 
 ```bash
 hf auth login
-./upload.sh --model b0
+./scripts/upload.sh --model b0
 ```
 
 Mặc định script upload toàn bộ `outputs/b0_utterance` vào `ngocbao05/ser/b0`. Các version sau có thể dùng cùng repo và đổi folder bằng `--model`:
 
 ```bash
-./upload.sh --model b1
+./scripts/upload.sh --model b1
 ```
 
 ## Download And Evaluate
 
 ```bash
 hf auth login
-./download.sh --model b0
+./scripts/download.sh --model b0
 ```
 
 Mặc định script tải `ngocbao05/ser/b0` về `outputs/hf_checkpoints/b0`, sau đó evaluate `best.pt` và ghi metrics tại `outputs/hf_checkpoints/b0/test_metrics.json`.
@@ -133,18 +151,13 @@ Mặc định script tải `ngocbao05/ser/b0` về `outputs/hf_checkpoints/b0`, 
 ## Inference B0
 
 ```bash
-./infer_b0.sh
+./scripts/infer_b0.sh
 ```
 
 Output gồm emotion dự đoán, confidence, và probability từng class.
 
 ## Cấu trúc
 
-- `dataset.py`: load `AbstractTTS/IEMOCAP`, map nhãn 8-to-4, bỏ nhãn minor/tie, tạo split nếu dataset chỉ có train.
-- `b0_model.py`: B0 frozen SSL encoder + mean/attention pooling + MLP classifier.
-- `features.py`: acoustic cues cho explanation.
-- `train_b0.py`: B0 training loop, validation metrics, best checkpoint theo macro F1.
-- `evaluate_b0.py`: B0 WA, UA, macro F1, WF1, confusion matrix.
-- `infer_b0.py`: B0 single-audio prediction.
-- `metrics.py`: reusable classification metrics cho các baseline sau.
-- `train_b0.sh`, `evaluate_b0.sh`, `infer_b0.sh`, `upload.sh`, `download.sh`: entrypoint kiểu script, chỉnh tham số ở đầu file.
+- `models/`: model definitions, hiện có `models/b0.py`.
+- `utils/`: config, dataset loader, metrics, feature helpers.
+- `scripts/`: train/evaluate/infer/export/upload/download implementations và shell entrypoints, gồm `train_b01.sh`/`evaluate_b01.sh` cho B01.

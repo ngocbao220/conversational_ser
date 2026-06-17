@@ -6,3 +6,4 @@ __pycache__/
 .DS_Store
 iemocap_export/
 outputs/
+iemocap/

@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+
 # =========================
 # Hugging Face upload parameters
 # =========================
@@ -16,7 +20,7 @@ HF_REPO_ID="${HF_REPO_ID:-ngocbao05/ser}"
 
 # Upload the whole training output directory so the checkpoint stays together
 # with run_config.json, history.json, train.log, and metrics if present.
-OUTPUT_DIR="${OUTPUT_DIR:-outputs/b0_utterance}"
+OUTPUT_DIR="${OUTPUT_DIR:-}"
 PATH_IN_REPO="${PATH_IN_REPO:-$MODEL_NAME}"
 
 REPO_TYPE="${REPO_TYPE:-model}"
@@ -118,6 +122,17 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ -z "$OUTPUT_DIR" ]]; then
+  case "$MODEL_NAME" in
+    b01)
+      OUTPUT_DIR="outputs/b01_loso_unfreeze4"
+      ;;
+    *)
+      OUTPUT_DIR="outputs/b0_utterance"
+      ;;
+  esac
+fi
 
 if [[ ! -d "$OUTPUT_DIR" ]]; then
   echo "Output directory not found: $OUTPUT_DIR" >&2

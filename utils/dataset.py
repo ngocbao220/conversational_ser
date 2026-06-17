@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 import numpy as np
@@ -47,6 +48,17 @@ EMOTION_SCORE_COLUMNS = [
 ]
 
 TRANSCRIPT_COLUMNS = ["transcription", "transcript", "text", "sentence", "utterance"]
+ID_COLUMNS = (
+    "utt_id",
+    "utterance_id",
+    "utterance_name",
+    "id",
+    "name",
+    "file",
+    "filename",
+    "file_id",
+    "audio_file",
+)
 
 
 def normalize_label(value: Any) -> Optional[str]:
@@ -97,6 +109,37 @@ def get_transcript(example: Mapping[str, Any]) -> str:
     return ""
 
 
+def get_utterance_id(example: Mapping[str, Any]) -> str:
+    for col in ID_COLUMNS:
+        value = example.get(col)
+        if value is not None:
+            return str(value)
+    audio = example.get("audio")
+    if isinstance(audio, Mapping):
+        for key in ("path", "file", "filename"):
+            value = audio.get(key)
+            if value is not None:
+                return str(value)
+    return ""
+
+
+def get_session_id(example: Mapping[str, Any]) -> str:
+    utt_id = get_utterance_id(example)
+    match = re.search(r"(Ses\d{2})", utt_id)
+    if match:
+        return match.group(1)
+
+    session = example.get("session_id") or example.get("session")
+    if session is not None:
+        session_text = str(session)
+        match = re.search(r"(Ses\d{2})", session_text)
+        if match:
+            return match.group(1)
+        if session_text.isdigit():
+            return f"Ses{int(session_text):02d}"
+    return ""
+
+
 def _audio_array(example: Mapping[str, Any]) -> np.ndarray:
     audio = example["audio"]
     if isinstance(audio, dict):
@@ -132,6 +175,8 @@ def prepare_example(example: Dict[str, Any], max_audio_length: Optional[int] = N
         "labels": LABEL2ID[label],
         "emotion": label,
         "transcript": get_transcript(example),
+        "utterance_id": get_utterance_id(example),
+        "session_id": get_session_id(example),
         "speaking_rate": 0.0,
         "pitch_mean": 0.0,
         "pitch_std": 0.0,
@@ -168,6 +213,8 @@ def filter_and_prepare_dataset(
             "labels": Value("int64"),
             "emotion": Value("string"),
             "transcript": Value("string"),
+            "utterance_id": Value("string"),
+            "session_id": Value("string"),
             "speaking_rate": Value("float32"),
             "pitch_mean": Value("float32"),
             "pitch_std": Value("float32"),
@@ -201,6 +248,9 @@ def load_iemocap_splits(config: Mapping[str, Any]) -> DatasetDict:
         first_split = next(iter(raw.keys()))
         raw = DatasetDict({"train": raw[first_split]})
 
+    if str(dataset_cfg.get("split_strategy", "random")).lower() == "loso":
+        return load_loso_iemocap_splits(raw, dataset_cfg, sampling_rate, max_duration_seconds, num_proc, seed)
+
     prepared = DatasetDict(
         {
             split: filter_and_prepare_dataset(ds, sampling_rate, max_duration_seconds, num_proc)
@@ -226,6 +276,45 @@ def load_iemocap_splits(config: Mapping[str, Any]) -> DatasetDict:
     second = stratified_or_random_split(holdout, test_size=1.0 - validation_fraction, seed=seed)
     return limit_split_sizes(
         DatasetDict({"train": first["train"], "validation": second["train"], "test": second["test"]}),
+        dataset_cfg,
+        seed,
+    )
+
+
+def load_loso_iemocap_splits(
+    raw: DatasetDict,
+    dataset_cfg: Mapping[str, Any],
+    sampling_rate: int,
+    max_duration_seconds: Optional[float],
+    num_proc: int,
+    seed: int,
+) -> DatasetDict:
+    test_session = str(dataset_cfg.get("test_session", "Ses05"))
+    source = raw["train"]
+
+    with_session = source.filter(lambda row: get_session_id(row) != "", num_proc=num_proc)
+    test_raw = with_session.filter(lambda row: get_session_id(row) == test_session, num_proc=num_proc)
+    train_raw = with_session.filter(lambda row: get_session_id(row) != test_session, num_proc=num_proc)
+
+    if len(test_raw) == 0:
+        raise ValueError(f"LOSO test split is empty for test_session={test_session!r}.")
+    if len(train_raw) == 0:
+        raise ValueError(f"LOSO train split is empty for test_session={test_session!r}.")
+
+    prepared_train = filter_and_prepare_dataset(train_raw, sampling_rate, max_duration_seconds, num_proc)
+    prepared_test = filter_and_prepare_dataset(test_raw, sampling_rate, max_duration_seconds, num_proc)
+
+    validation_size = float(dataset_cfg.get("validation_size", 0.1))
+    if validation_size > 0:
+        train_validation = stratified_or_random_split(prepared_train, test_size=validation_size, seed=seed)
+        train = train_validation["train"]
+        validation = train_validation["test"]
+    else:
+        train = prepared_train
+        validation = prepared_train.select([])
+
+    return limit_split_sizes(
+        DatasetDict({"train": train, "validation": validation, "test": prepared_test}),
         dataset_cfg,
         seed,
     )

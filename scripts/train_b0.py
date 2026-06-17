@@ -13,10 +13,10 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoFeatureExtractor, get_cosine_schedule_with_warmup, get_linear_schedule_with_warmup
 
-from b0_config import add_b0_model_args, add_dataset_args, add_logging_args, add_training_args, build_b0_config
-from b0_model import B0UtteranceClassifier, build_b0_model
-from dataset import CANONICAL_LABELS, SERDataCollator, load_iemocap_splits
-from evaluate_b0 import evaluate_model, resolve_device
+from models.b0 import B0UtteranceClassifier, build_b0_model
+from scripts.evaluate_b0 import evaluate_model, resolve_device
+from utils.config import add_b0_model_args, add_dataset_args, add_logging_args, add_training_args, build_b0_config
+from utils.dataset import CANONICAL_LABELS, SERDataCollator, load_iemocap_splits
 
 
 def append_log_line(log_path: Path, message: str) -> None:
@@ -148,12 +148,15 @@ def log_training_session(
         f"last_checkpoint={output_dir / 'last.pt'}",
         f"device={device}",
         f"dataset={dataset_cfg['name']}",
+        f"split_strategy={dataset_cfg.get('split_strategy', 'random')}",
+        f"test_session={dataset_cfg.get('test_session', '')}",
         f"sampling_rate={audio_cfg['sampling_rate']}",
         f"max_duration_seconds={audio_cfg['max_duration_seconds']}",
         f"seed={dataset_cfg['seed']}",
         f"encoder={model_cfg['encoder_name']}",
         f"pooling={model_cfg['pooling']}",
         f"freeze_encoder={model_cfg['freeze_encoder']}",
+        f"trainable_encoder_layers={model_cfg.get('trainable_encoder_layers', 0)}",
         f"hidden_dim={model_cfg['hidden_dim']}",
         f"dropout={model_cfg['dropout']}",
         f"batch_size={training_cfg['batch_size']}",
