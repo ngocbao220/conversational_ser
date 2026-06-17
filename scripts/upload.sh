@@ -21,12 +21,12 @@ HF_REPO_ID="${HF_REPO_ID:-ngocbao05/ser}"
 # Upload the whole training output directory so the checkpoint stays together
 # with run_config.json, history.json, train.log, and metrics if present.
 OUTPUT_DIR="${OUTPUT_DIR:-}"
-PATH_IN_REPO="${PATH_IN_REPO:-$MODEL_NAME}"
+PATH_IN_REPO="${PATH_IN_REPO:-}"
 
 REPO_TYPE="${REPO_TYPE:-model}"
 PRIVATE="${PRIVATE:-false}"
 REVISION="${REVISION:-main}"
-COMMIT_MESSAGE="${COMMIT_MESSAGE:-upload ${MODEL_NAME} checkpoint}"
+COMMIT_MESSAGE="${COMMIT_MESSAGE:-}"
 
 # =========================
 # Do not edit below
@@ -132,6 +132,14 @@ if [[ -z "$OUTPUT_DIR" ]]; then
       OUTPUT_DIR="outputs/b0_utterance"
       ;;
   esac
+fi
+
+if [[ -z "$PATH_IN_REPO" ]]; then
+  PATH_IN_REPO="$MODEL_NAME"
+fi
+
+if [[ -z "$COMMIT_MESSAGE" ]]; then
+  COMMIT_MESSAGE="upload ${MODEL_NAME} checkpoint"
 fi
 
 if [[ ! -d "$OUTPUT_DIR" ]]; then
