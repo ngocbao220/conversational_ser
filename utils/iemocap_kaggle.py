@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
-import soundfile as sf
 import torch
 from torch.utils.data import Dataset
 
@@ -243,6 +242,8 @@ def split_loso_by_dialogue(
 
 
 def load_audio_mono(path: str | Path, target_sampling_rate: int) -> np.ndarray:
+    import soundfile as sf
+
     waveform, sampling_rate = sf.read(str(path), dtype="float32", always_2d=False)
     waveform = np.asarray(waveform, dtype=np.float32)
     if waveform.ndim > 1:

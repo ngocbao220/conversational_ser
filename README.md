@@ -77,6 +77,83 @@ results/wavlm_baseline_no_mal_no_tim/best.pth
 results/wavlm_baseline_no_mal_no_tim/last.pth
 ```
 
+## Experiment 2 - WavLM + MAL No TIM
+
+Đây là B1 theo `instructions/wavlm_mal.md`: dùng fixed mean-pooled WavLM embeddings, sau đó train MAL dialogue memory theo thứ tự utterance trong từng dialogue.
+
+```bash
+./scripts/train_wavlm_mal.sh
+```
+
+Config YAML:
+
+```text
+configs/wavlm_mal_no_tim.yaml
+```
+
+Mặc định:
+
+- dataset/split giống Experiment 1
+- WavLM chỉ dùng để precompute fixed mean-pooled embeddings
+- dialogue order được sort bằng `start_time`, `end_time`, `utterance_id`
+- `start_time`/`end_time` không được feed vào model
+- MAL reset state ở đầu mỗi dialogue
+- MAL dùng read-before-write: classify bằng memory cũ rồi mới update state
+- temporal vector là zero vector, `temporal_feature_dim: 16`
+- checkpoint tốt nhất chọn theo validation UA
+
+Outputs:
+
+```text
+results/wavlm_mal_no_tim/metrics.json
+results/wavlm_mal_no_tim/predictions.csv
+results/wavlm_mal_no_tim/config.json
+results/wavlm_mal_no_tim/confusion_matrix.csv
+results/wavlm_mal_no_tim/confusion_matrix.png
+results/wavlm_mal_no_tim/best.pth
+results/wavlm_mal_no_tim/last.pth
+```
+
+## Experiment 3 - WavLM + TIM
+
+Đây là real-temporal-vector version để so sánh trực tiếp với Experiment 2.
+
+```bash
+./scripts/train_wavlm_tim.sh
+```
+
+Config YAML:
+
+```text
+configs/wavlm_tim.yaml
+```
+
+Mặc định:
+
+- dataset/split/precompute embedding giống Experiment 2
+- temporal interface 16 chiều giống Experiment 2
+- `temporal_feature_mode: real`
+- temporal features được tính causally từ `start_time`, `end_time`, speaker turn metadata
+- continuous temporal features normalize bằng train split stats only
+- binary flags không normalize
+- `turn_index_norm = turn_index / max_train_dialogue_length`
+- TIM memory dùng read-before-write và reset state theo dialogue
+- checkpoint tốt nhất chọn theo validation UA
+
+Outputs:
+
+```text
+results/wavlm_tim/metrics.json
+results/wavlm_tim/predictions.csv
+results/wavlm_tim/config.json
+results/wavlm_tim/temporal_feature_stats.json
+results/wavlm_tim/confusion_matrix.csv
+results/wavlm_tim/confusion_matrix.png
+results/wavlm_tim/subset_metrics.json
+results/wavlm_tim/best.pth
+results/wavlm_tim/last.pth
+```
+
 ## Legacy B0 - Utterance-Level Baseline
 
 B0 là baseline bắt buộc:
@@ -206,6 +283,6 @@ Output gồm emotion dự đoán, confidence, và probability từng class.
 
 ## Cấu trúc
 
-- `models/`: model definitions, gồm `models/wavlm_baseline.py`.
-- `utils/`: config, Kaggle IEMOCAP parser, dataset loader, metrics, feature helpers.
+- `models/`: model definitions, gồm `models/wavlm_baseline.py`, `models/wavlm_mal.py`, `models/wavlm_tim.py`.
+- `utils/`: config, Kaggle IEMOCAP parser, dataset loader, metrics, dialogue embedding helpers, temporal feature helpers.
 - `scripts/`: train/evaluate/infer/export/upload/download implementations và shell entrypoints.

@@ -1,0 +1,56 @@
+experiment_name: wavlm_tim
+output_dir: results/wavlm_tim
+seed: 42
+
+dataset:
+  iemocap_root: iemocap
+  auto_download: true
+  kaggle_dataset: sangayb/iemocap
+  test_session: 5
+  validation_ratio: 0.1
+  sampling_rate: 16000
+  max_duration_seconds: null
+
+model:
+  wavlm_model_name: microsoft/wavlm-base
+  num_labels: 4
+  use_mal_memory: true
+  use_temporal_features: true
+  temporal_feature_mode: real
+  temporal_feature_dim: 16
+  temporal_emb_dim: 64
+  memory_dim: 256
+  residual_gate_init: 0.0
+  short_gap_threshold: 0.3
+  long_gap_threshold: 1.0
+  overlap_threshold: 0.05
+  dropout: 0.2
+
+precompute:
+  enabled: true
+  pooling: mean
+  cache_path: results/wavlm_tim/cache/wavlm_mean_embeddings.pt
+  force_recompute: false
+  batch_size: 16
+
+training:
+  device: auto
+  max_epochs: 30
+  learning_rate: 0.0001
+  weight_decay: 0.01
+  scheduler: cosine
+  warmup_ratio: 0.1
+  gradient_clip: 1.0
+  use_class_weights: false
+  num_workers: 0
+  progress_bar: true
+
+analysis:
+  strong_overlap_threshold: 0.25
+
+wandb:
+  use_wandb: true
+  project: conversational-SER
+  run_name: wavlm_tim
+  entity: null
+  mode: online
