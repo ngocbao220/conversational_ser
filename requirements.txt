@@ -2,6 +2,7 @@ accelerate>=0.30.0,<1.0.0
 datasets[audio]>=2.19.0,<4.0.0
 huggingface_hub>=0.23.0
 ipykernel>=6.29.0
+kaggle>=1.6.17
 librosa>=0.10.2
 numpy>=1.24.0,<2.0.0
 pandas>=2.0.0

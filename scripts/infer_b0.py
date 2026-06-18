@@ -10,7 +10,7 @@ import soundfile as sf
 import torch
 from transformers import AutoFeatureExtractor
 
-from models.b0 import build_b0_model
+from models.wavlm import build_b0_model
 from scripts.evaluate_b0 import load_checkpoint, resolve_device
 from utils.dataset import CANONICAL_LABELS, ID2LABEL
 

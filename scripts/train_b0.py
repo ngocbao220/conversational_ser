@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoFeatureExtractor, get_cosine_schedule_with_warmup, get_linear_schedule_with_warmup
 
-from models.b0 import B0UtteranceClassifier, build_b0_model
+from models.wavlm import B0UtteranceClassifier, build_b0_model
 from scripts.evaluate_b0 import evaluate_model, resolve_device
 from utils.config import add_b0_model_args, add_dataset_args, add_logging_args, add_training_args, build_b0_config
 from utils.dataset import CANONICAL_LABELS, SERDataCollator, load_iemocap_splits
@@ -32,10 +32,11 @@ def emit_log(log_path: Path, message: str) -> None:
 
 
 def save_checkpoint(path: Path, model: B0UtteranceClassifier, config: Dict[str, Any], metrics: Dict[str, Any]) -> None:
+    baseline_name = str(config.get("baselines", {}).get("b0", {}).get("name", "B0_utterance"))
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
-            "baseline": "B0_utterance",
+            "baseline": baseline_name,
             "model_state_dict": model.state_dict(),
             "config": config,
             "metrics": metrics,
@@ -191,7 +192,7 @@ def progress_kwargs(logging_cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train B0 utterance-level SER baseline.")
+    parser = argparse.ArgumentParser(description="Train utterance-level SER baseline.")
     add_dataset_args(parser)
     add_b0_model_args(parser)
     add_training_args(parser)
@@ -266,7 +267,7 @@ def main() -> None:
 
     trainable_parameters = [parameter for parameter in model.parameters() if parameter.requires_grad]
     if not trainable_parameters:
-        raise RuntimeError("B0 has no trainable parameters. Check classifier and freeze_encoder settings.")
+        raise RuntimeError(f"{b0_cfg['name']} has no trainable parameters. Check classifier and freeze_encoder settings.")
 
     optimizer = torch.optim.AdamW(
         trainable_parameters,
@@ -293,7 +294,7 @@ def main() -> None:
 
         train_iterator = tqdm(
             train_loader,
-            desc=f"B0 epoch {epoch}/{epochs} train",
+            desc=f"{b0_cfg['name']} epoch {epoch}/{epochs} train",
             disable=not progress_bar,
             **progress_kwargs(logging_cfg),
         )
@@ -341,7 +342,7 @@ def main() -> None:
             val_loader,
             device,
             progress_bar=progress_bar,
-            description=f"B0 epoch {epoch}/{epochs} validation",
+            description=f"{b0_cfg['name']} epoch {epoch}/{epochs} validation",
         )
         epoch_log = {
             "epoch": epoch,
@@ -387,7 +388,7 @@ def main() -> None:
 
     (output_dir / "history.json").write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
     (output_dir / "run_config.json").write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
-    append_log_line(log_path, f"finished baseline=B0_utterance best_macro_f1={best_macro_f1:.6f}")
+    append_log_line(log_path, f"finished baseline={b0_cfg['name']} best_macro_f1={best_macro_f1:.6f}")
     if wandb_run is not None:
         wandb_run.summary["best_macro_f1"] = best_macro_f1
         wandb_run.summary["best_checkpoint"] = str(output_dir / "best.pt")

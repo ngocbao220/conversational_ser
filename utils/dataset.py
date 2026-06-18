@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple
 
 import numpy as np
 import torch
@@ -194,9 +194,13 @@ def filter_and_prepare_dataset(
     sampling_rate: int,
     max_duration_seconds: Optional[float],
     num_proc: int = 1,
+    row_filter: Optional[Callable[[Mapping[str, Any]], bool]] = None,
 ) -> Dataset:
     dataset = dataset.cast_column("audio", Audio(sampling_rate=sampling_rate))
-    dataset = dataset.filter(lambda row: get_canonical_label(row) is not None, num_proc=num_proc)
+    if row_filter is None:
+        dataset = dataset.filter(lambda row: get_canonical_label(row) is not None, num_proc=num_proc)
+    else:
+        dataset = dataset.filter(lambda row: row_filter(row) and get_canonical_label(row) is not None, num_proc=num_proc)
     max_audio_length = None
     if max_duration_seconds is not None and max_duration_seconds > 0:
         max_audio_length = int(max_duration_seconds * sampling_rate)
@@ -292,17 +296,25 @@ def load_loso_iemocap_splits(
     test_session = str(dataset_cfg.get("test_session", "Ses05"))
     source = raw["train"]
 
-    with_session = source.filter(lambda row: get_session_id(row) != "", num_proc=num_proc)
-    test_raw = with_session.filter(lambda row: get_session_id(row) == test_session, num_proc=num_proc)
-    train_raw = with_session.filter(lambda row: get_session_id(row) != test_session, num_proc=num_proc)
+    prepared_train = filter_and_prepare_dataset(
+        source,
+        sampling_rate,
+        max_duration_seconds,
+        num_proc,
+        row_filter=lambda row: get_session_id(row) not in {"", test_session},
+    )
+    prepared_test = filter_and_prepare_dataset(
+        source,
+        sampling_rate,
+        max_duration_seconds,
+        num_proc,
+        row_filter=lambda row: get_session_id(row) == test_session,
+    )
 
-    if len(test_raw) == 0:
+    if len(prepared_test) == 0:
         raise ValueError(f"LOSO test split is empty for test_session={test_session!r}.")
-    if len(train_raw) == 0:
+    if len(prepared_train) == 0:
         raise ValueError(f"LOSO train split is empty for test_session={test_session!r}.")
-
-    prepared_train = filter_and_prepare_dataset(train_raw, sampling_rate, max_duration_seconds, num_proc)
-    prepared_test = filter_and_prepare_dataset(test_raw, sampling_rate, max_duration_seconds, num_proc)
 
     validation_size = float(dataset_cfg.get("validation_size", 0.1))
     if validation_size > 0:

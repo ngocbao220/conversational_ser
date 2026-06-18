@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoFeatureExtractor
 
-from models.b0 import build_b0_model
+from models.wavlm import build_b0_model
 from utils.config import add_dataset_args, str_to_bool
 from utils.dataset import CANONICAL_LABELS, SERDataCollator, load_iemocap_splits
 from utils.metrics import classification_metrics
@@ -84,7 +84,7 @@ def load_checkpoint(path: str | Path, device: torch.device) -> Dict[str, Any]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Evaluate B0 utterance-level SER baseline.")
+    parser = argparse.ArgumentParser(description="Evaluate utterance-level SER baseline.")
     parser.add_argument("--checkpoint", default="outputs/b0_utterance/best.pt")
     parser.add_argument("--split", default="test", choices=["train", "validation", "test"])
     parser.add_argument("--output", default=None)
@@ -125,6 +125,7 @@ def main() -> None:
     )
 
     b0_cfg = config["baselines"]["b0"]
+    baseline_name = str(b0_cfg.get("name", checkpoint.get("baseline", "SER")))
     training_cfg = b0_cfg.get("training", {})
     model_cfg = b0_cfg.get("model", {})
     audio_cfg = config.get("audio", {})
@@ -151,7 +152,7 @@ def main() -> None:
         dataloader,
         device,
         progress_bar=progress_bar,
-        description=f"B0 {args.split}"
+        description=f"{baseline_name} {args.split}"
     )
 
     output_path = Path(args.output or b0_cfg.get("metrics_path", f"outputs/b0_utterance/{args.split}_metrics.json"))

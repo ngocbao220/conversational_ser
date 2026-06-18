@@ -1,13 +1,13 @@
 # Speech Emotion Recognition Baselines
 
-Repo này dùng `AbstractTTS/IEMOCAP`, gom nhãn IEMOCAP về 4 class:
+Repo này có baseline WavLM SER trên Kaggle IEMOCAP local trong `iemocap/`, gom nhãn IEMOCAP về 4 class:
 
-- `neutral -> neutral`
-- `happy + excited -> happy`
+- `ang -> angry`
+- `hap + exc -> happy`
+- `neu -> neutral`
 - `sad -> sad`
-- `angry + frustrated -> angry`
 
-Các nhãn minor như `fear`, `surprise`, `disgust`, `other`, `tie_prediction` bị bỏ qua trong loader.
+Các nhãn ngoài `{ang, hap, exc, neu, sad}` bị bỏ qua.
 
 ## Cài đặt trên cloud NVIDIA GPU CUDA 12.6
 
@@ -30,6 +30,54 @@ python -c "from transformers import WavLMModel; print(WavLMModel.__name__)"
 ```
 
 ## B0 - Utterance-Level Baseline
+
+## Experiment 1 - WavLM Baseline No MAL/No TIM
+
+Đây là control condition chính theo `instructions/baseline.md`.
+
+```bash
+./scripts/train_wavlm_baseline.sh
+```
+
+Config YAML:
+
+```text
+configs/wavlm_baseline_no_mal_no_tim.yaml
+```
+
+Mặc định:
+
+- dataset local: `iemocap/`
+- nếu `iemocap/` chưa tồn tại, config mặc định sẽ tự tải Kaggle dataset `sangayb/iemocap` rồi đặt folder thành `iemocap/`
+- LOSO: `test_session: 5`
+- validation: 10% dialogue-level split từ train sessions
+- model: frozen `microsoft/wavlm-base`
+- pooling: attentive statistics pooling
+- không dùng dialogue memory, timestamps, speaker, MAL, TIM trong model
+- checkpoint tốt nhất chọn theo validation UA
+
+Để auto-download từ Kaggle, cần cài `kaggle` và cấu hình credentials bằng một trong hai cách:
+
+```bash
+export KAGGLE_USERNAME="..."
+export KAGGLE_KEY="..."
+```
+
+hoặc đặt `kaggle.json` tại `~/.kaggle/kaggle.json`.
+
+Outputs:
+
+```text
+results/wavlm_baseline_no_mal_no_tim/metrics.json
+results/wavlm_baseline_no_mal_no_tim/predictions.csv
+results/wavlm_baseline_no_mal_no_tim/config.json
+results/wavlm_baseline_no_mal_no_tim/confusion_matrix.csv
+results/wavlm_baseline_no_mal_no_tim/confusion_matrix.png
+results/wavlm_baseline_no_mal_no_tim/best.pth
+results/wavlm_baseline_no_mal_no_tim/last.pth
+```
+
+## Legacy B0 - Utterance-Level Baseline
 
 B0 là baseline bắt buộc:
 
@@ -158,6 +206,6 @@ Output gồm emotion dự đoán, confidence, và probability từng class.
 
 ## Cấu trúc
 
-- `models/`: model definitions, hiện có `models/b0.py`.
-- `utils/`: config, dataset loader, metrics, feature helpers.
-- `scripts/`: train/evaluate/infer/export/upload/download implementations và shell entrypoints, gồm `train_b01.sh`/`evaluate_b01.sh` cho B01.
+- `models/`: model definitions, gồm `models/wavlm_baseline.py`.
+- `utils/`: config, Kaggle IEMOCAP parser, dataset loader, metrics, feature helpers.
+- `scripts/`: train/evaluate/infer/export/upload/download implementations và shell entrypoints.
