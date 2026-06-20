@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="260" viewBox="0 0 1120 260" role="img" aria-labelledby="title desc">
+  <title id="title">Baseline WavLM SER pipeline</title>
+  <desc id="desc">Audio-only utterance classifier without metadata inputs.</desc>
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .box { fill: #ffffff; stroke: #64748b; stroke-width: 1.6; rx: 9; }
+      .blue { fill: #e0f2fe; stroke: #0369a1; }
+      .gray { fill: #f1f5f9; stroke: #64748b; }
+      .red { fill: #fee2e2; stroke: #b91c1c; }
+      .muted { fill: #f8fafc; stroke: #cbd5e1; stroke-dasharray: 6 5; }
+      .text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; fill: #18212f; font-size: 16px; font-weight: 700; }
+      .small { font-size: 13px; font-weight: 500; fill: #475569; }
+      .arrow { stroke: #334155; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1120" height="260"/>
+  <rect class="box blue" x="48" y="82" width="135" height="60"/><text class="text" x="82" y="116">Waveform</text>
+  <rect class="box blue" x="245" y="82" width="170" height="60"/><text class="text" x="285" y="106">WavLM</text><text class="small" x="275" y="128">frozen by default</text>
+  <rect class="box gray" x="477" y="82" width="210" height="60"/><text class="text" x="511" y="106">Attentive statistics</text><text class="small" x="548" y="128">pooling</text>
+  <rect class="box gray" x="750" y="82" width="140" height="60"/><text class="text" x="787" y="116">MLP head</text>
+  <rect class="box red" x="952" y="82" width="120" height="60"/><text class="text" x="985" y="116">Label</text>
+  <path class="arrow" d="M183 112 H245"/><path class="arrow" d="M415 112 H477"/><path class="arrow" d="M687 112 H750"/><path class="arrow" d="M890 112 H952"/>
+  <rect class="box muted" x="245" y="175" width="642" height="48"/>
+  <text class="small" x="270" y="204">Metadata retained for logging/splits only: dialogue_id, utterance_id, speaker_id, start_time, end_time. Not used by model.</text>
+</svg>

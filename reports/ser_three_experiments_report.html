@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Báo cáo SER: WavLM Baseline, MAL, TIM</title>
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --paper: #ffffff;
+      --ink: #18212f;
+      --muted: #5d6a7c;
+      --line: #d9dee7;
+      --accent: #0f766e;
+      --accent-soft: #e7f5f2;
+      --blue: #1d4ed8;
+      --green: #15803d;
+      --orange: #b45309;
+      --red: #b91c1c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      line-height: 1.55;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 24px 56px;
+    }
+
+    header {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 30px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      margin: 20px 0 8px;
+      font-size: 17px;
+    }
+
+    p { margin: 8px 0; }
+
+    .muted { color: var(--muted); }
+
+    .section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px 28px;
+      margin: 18px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 14px 0;
+    }
+
+    .tile {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 16px;
+      background: #fbfcfe;
+    }
+
+    .tile strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 5px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 650;
+      margin-right: 5px;
+      white-space: nowrap;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 18px;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eef2f7;
+      text-align: left;
+      font-weight: 700;
+    }
+
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tr.group-start td { border-top: 2px solid #9aa6b7; }
+    .best { font-weight: 800; color: var(--green); }
+    .warn { color: var(--orange); font-weight: 650; }
+    .bad { color: var(--red); font-weight: 650; }
+
+    .note {
+      border-left: 4px solid var(--accent);
+      padding: 10px 12px;
+      background: var(--accent-soft);
+      margin: 14px 0;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .step {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 90px;
+    }
+
+    .step b {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--blue);
+    }
+
+    .diagram {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      margin: 14px 0 18px;
+    }
+
+    .caption {
+      color: var(--muted);
+      font-size: 13px;
+      margin: -8px 0 16px;
+    }
+
+    ul { margin: 8px 0 8px 20px; padding: 0; }
+    li { margin: 5px 0; }
+    code {
+      background: #eef2f7;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    @media (max-width: 900px) {
+      .grid, .flow { grid-template-columns: 1fr; }
+      .page { padding: 18px 12px 36px; }
+      header, .section { padding: 20px 16px; }
+      table { font-size: 13px; }
+      th, td { padding: 7px 8px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>Báo cáo thí nghiệm SER trên IEMOCAP</h1>
+      <p class="muted">
+        So sánh ba mô hình: WavLM baseline, WavLM + MAL, và WavLM + TIM.
+        Kết quả lấy từ thư mục <code>outputs/hf_checkpoints/</code>.
+      </p>
+      <p>
+        <span class="tag">Dataset: IEMOCAP</span>
+        <span class="tag">Task: Speech Emotion Recognition</span>
+        <span class="tag">Split: LOSO, test session 5</span>
+        <span class="tag">Labels: angry, happy, neutral, sad</span>
+      </p>
+    </header>
+
+    <section class="section">
+      <h2>1. Tóm tắt mục tiêu</h2>
+      <p>
+        Mục tiêu của chuỗi thí nghiệm là kiểm tra tác động của bộ nhớ hội thoại và đặc trưng tương tác thời gian
+        đối với bài toán nhận diện cảm xúc từ lời nói. Ba cấu hình được thiết kế tăng dần về mức sử dụng ngữ cảnh:
+      </p>
+      <div class="grid">
+        <div class="tile">
+          <strong>Experiment 1: WavLM baseline</strong>
+          Audio utterance độc lập. Không dùng memory, speaker, timestamp, hay đặc trưng temporal trong model.
+        </div>
+        <div class="tile">
+          <strong>Experiment 2: WavLM + MAL</strong>
+          Dùng embedding WavLM cố định và memory theo thứ tự utterance trong từng dialogue. Không dùng timing thật.
+        </div>
+        <div class="tile">
+          <strong>Experiment 3: WavLM + TIM</strong>
+          Giữ memory như Exp 2, thêm temporal interaction features tính causal từ start/end time và speaker history.
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>2. Xử lý dữ liệu</h2>
+      <p>
+        Pipeline dữ liệu dùng phiên bản Kaggle của IEMOCAP. Mỗi utterance được map với audio, annotation cảm xúc,
+        transcript và metadata hội thoại.
+      </p>
+      <div class="flow">
+        <div class="step">
+          <b>1. Đọc session</b>
+          Quét các thư mục <code>Session1</code> đến <code>Session5</code>.
+        </div>
+        <div class="step">
+          <b>2. Đọc annotation</b>
+          Cảm xúc lấy từ <code>dialog/EmoEvaluation/*.txt</code>, không lấy từ transcript text.
+        </div>
+        <div class="step">
+          <b>3. Ghép transcript</b>
+          Transcript và timestamp được match bằng <code>utterance_id</code>.
+        </div>
+        <div class="step">
+          <b>4. Ghép audio</b>
+          Audio path trỏ tới <code>sentences/wav/&lt;dialogue_id&gt;/&lt;utterance_id&gt;.wav</code>.
+        </div>
+        <div class="step">
+          <b>5. Split LOSO</b>
+          Test là Session 5; validation là 10% dialogue-level split từ train sessions.
+        </div>
+      </div>
+
+      <h3>Label mapping</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Raw label</th>
+            <th>Final label</th>
+            <th class="num">Class id</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ang</code></td><td>angry</td><td class="num">0</td></tr>
+          <tr><td><code>hap</code>, <code>exc</code></td><td>happy</td><td class="num">1</td></tr>
+          <tr><td><code>neu</code></td><td>neutral</td><td class="num">2</td></tr>
+          <tr><td><code>sad</code></td><td>sad</td><td class="num">3</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Test set</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th class="num">Số mẫu</th>
+            <th class="num">Tỉ lệ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>angry</td><td class="num">170</td><td class="num">13.70%</td></tr>
+          <tr><td>happy</td><td class="num">442</td><td class="num">35.62%</td></tr>
+          <tr><td>neutral</td><td class="num">384</td><td class="num">30.94%</td></tr>
+          <tr><td>sad</td><td class="num">245</td><td class="num">19.74%</td></tr>
+          <tr><th>Tổng</th><th class="num">1241</th><th class="num">100.00%</th></tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        Validation được tách theo dialogue, nên không có utterance cùng dialogue bị chia giữa train và validation.
+        Đây là điểm quan trọng để tránh leakage ở bài toán hội thoại.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>3. Kiến trúc mô hình</h2>
+      <img class="diagram" src="architecture_overview.svg" alt="Overview pipeline của ba kiến trúc SER">
+      <p class="caption">
+        Hình 1. Tổng quan khác biệt chính giữa ba thí nghiệm: baseline chỉ dùng audio, MAL thêm memory hội thoại,
+        TIM thêm temporal interaction features vào memory.
+      </p>
+
+      <h3>Experiment 1: WavLM baseline no MAL no TIM</h3>
+      <img class="diagram" src="baseline_pipeline.svg" alt="Pipeline của WavLM baseline">
+      <p class="caption">
+        Hình 2. Baseline là utterance-level classifier: metadata được lưu để trace kết quả nhưng không đi vào forward pass.
+      </p>
+      <ul>
+        <li>Input: waveform của một utterance.</li>
+        <li>Backbone: <code>microsoft/wavlm-base</code>.</li>
+        <li>Pooling: attentive statistics pooling.</li>
+        <li>Classifier: dropout + linear layer.</li>
+        <li>Metadata như <code>dialogue_id</code>, <code>speaker_id</code>, <code>start_time</code>, <code>end_time</code> được giữ trong dataset/output nhưng không đi vào model.</li>
+        <li>Mặc định WavLM frozen, chỉ train pooling/classifier head.</li>
+      </ul>
+
+      <h3>Experiment 2: WavLM + MAL no TIM</h3>
+      <img class="diagram" src="mal_pipeline.svg" alt="Pipeline của WavLM cộng MAL">
+      <p class="caption">
+        Hình 3. MAL đọc memory state trước khi update, reset theo dialogue boundary, và chỉ nhận zero temporal vector.
+      </p>
+      <ul>
+        <li>WavLM được dùng để precompute fixed mean-pooled utterance embeddings.</li>
+        <li>Utterance được group theo dialogue và sort theo <code>start_time</code>, <code>end_time</code>, <code>utterance_id</code>.</li>
+        <li>MAL memory dùng GRUCell, reset state ở đầu mỗi dialogue.</li>
+        <li>Memory là causal/read-before-write: dự đoán utterance hiện tại đọc memory cũ trước, sau đó mới update state.</li>
+        <li>Temporal interface vẫn tồn tại nhưng nhận vector zero 16 chiều.</li>
+        <li>Không tính duration, gap, overlap, interruption, hoặc speaker feature thật làm input.</li>
+      </ul>
+
+      <h3>Experiment 3: WavLM + TIM</h3>
+      <img class="diagram" src="tim_pipeline.svg" alt="Pipeline của WavLM cộng TIM">
+      <p class="caption">
+        Hình 4. TIM thay zero vector bằng temporal features causal, encode bằng MLP rồi concat với WavLM embedding trước memory.
+      </p>
+      <ul>
+        <li>Giữ setup embedding và memory gần giống Exp 2 để so sánh công bằng.</li>
+        <li>Thêm temporal feature encoder: MLP nhỏ nhận 16 temporal interaction features.</li>
+        <li>Memory input là concat giữa WavLM embedding và temporal embedding.</li>
+        <li>Continuous temporal features được normalize bằng train split statistics only.</li>
+        <li>Binary flags không normalize.</li>
+        <li>Các đặc trưng speaker habit được tính causal từ lịch sử trước đó của speaker, không dùng tương lai.</li>
+      </ul>
+
+      <h3>16 temporal features của TIM</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Feature</th>
+            <th>Ý nghĩa</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="num">1</td><td><code>duration</code></td><td>Độ dài utterance hiện tại.</td></tr>
+          <tr><td class="num">2</td><td><code>gap_prev</code></td><td>Khoảng cách với utterance trước.</td></tr>
+          <tr><td class="num">3</td><td><code>overlap_prev</code></td><td>Độ chồng lấn với utterance trước.</td></tr>
+          <tr><td class="num">4</td><td><code>overlap_ratio</code></td><td>Tỉ lệ overlap so với duration.</td></tr>
+          <tr><td class="num">5</td><td><code>is_overlap</code></td><td>Cờ có overlap.</td></tr>
+          <tr><td class="num">6</td><td><code>is_interrupting_prev</code></td><td>Cờ speaker hiện tại ngắt lời speaker trước.</td></tr>
+          <tr><td class="num">7</td><td><code>speaker_switch</code></td><td>Cờ đổi speaker so với utterance trước.</td></tr>
+          <tr><td class="num">8</td><td><code>same_speaker</code></td><td>Cờ cùng speaker với utterance trước.</td></tr>
+          <tr><td class="num">9</td><td><code>turn_index_norm</code></td><td>Vị trí turn chuẩn hóa theo max train dialogue length.</td></tr>
+          <tr><td class="num">10</td><td><code>prev_gap_abs</code></td><td>Trị tuyệt đối của gap trước.</td></tr>
+          <tr><td class="num">11</td><td><code>short_response</code></td><td>Cờ phản hồi ngắn.</td></tr>
+          <tr><td class="num">12</td><td><code>long_pause</code></td><td>Cờ pause dài.</td></tr>
+          <tr><td class="num">13</td><td><code>speaker_prev_overlap_rate</code></td><td>Tỉ lệ overlap trước đó của speaker.</td></tr>
+          <tr><td class="num">14</td><td><code>speaker_prev_mean_gap</code></td><td>Mean gap trước đó của speaker.</td></tr>
+          <tr><td class="num">15</td><td><code>speaker_prev_mean_duration</code></td><td>Mean duration trước đó của speaker.</td></tr>
+          <tr><td class="num">16</td><td><code>speaker_prev_turn_count_norm</code></td><td>Số turn trước đó của speaker, chuẩn hóa.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>4. Thiết lập huấn luyện và đánh giá</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Thành phần</th>
+            <th>Exp 1: Baseline</th>
+            <th>Exp 2: MAL</th>
+            <th>Exp 3: TIM</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Output dir của kết quả đang phân tích</td>
+            <td><code>outputs/hf_checkpoints/wavlm_baseline_no_mal_no_tim</code></td>
+            <td><code>outputs/hf_checkpoints/wavlm_mal_no_tim</code></td>
+            <td><code>outputs/hf_checkpoints/wavlm_tim</code></td>
+          </tr>
+          <tr>
+            <td>Checkpoint selection</td>
+            <td>Best validation UA</td>
+            <td>Best validation UA</td>
+            <td>Best validation UA</td>
+          </tr>
+          <tr>
+            <td>Test set</td>
+            <td>Session 5</td>
+            <td>Session 5</td>
+            <td>Session 5</td>
+          </tr>
+          <tr>
+            <td>Metrics</td>
+            <td colspan="3">WA, UA, Macro-F1, WF1, per-class precision/recall/F1, confusion matrix</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        Định nghĩa metrics:
+        <strong>WA</strong> là overall accuracy,
+        <strong>UA</strong> là balanced accuracy/macro recall,
+        <strong>Macro-F1</strong> là F1 trung bình đều theo class,
+        và <strong>WF1</strong> là weighted F1 theo support của class.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>5. Kết quả tổng thể trên test set</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th class="num">Best epoch</th>
+            <th class="num">Loss</th>
+            <th class="num">WA</th>
+            <th class="num">UA</th>
+            <th class="num">Macro-F1</th>
+            <th class="num">WF1</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>WavLM baseline</td>
+            <td class="num">6</td>
+            <td class="num">1.0996</td>
+            <td class="num">50.36</td>
+            <td class="num">52.46</td>
+            <td class="num">50.09</td>
+            <td class="num">50.12</td>
+          </tr>
+          <tr>
+            <td>WavLM + MAL no TIM</td>
+            <td class="num">71</td>
+            <td class="num">0.8824</td>
+            <td class="num">70.75</td>
+            <td class="num">71.52</td>
+            <td class="num">70.90</td>
+            <td class="num">70.61</td>
+          </tr>
+          <tr>
+            <td><strong>WavLM + TIM</strong></td>
+            <td class="num">35</td>
+            <td class="num best">0.7654</td>
+            <td class="num best">73.25</td>
+            <td class="num best">72.91</td>
+            <td class="num best">73.71</td>
+            <td class="num best">73.26</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table>
+        <thead>
+          <tr>
+            <th>So sánh</th>
+            <th class="num">ΔWA</th>
+            <th class="num">ΔUA</th>
+            <th class="num">ΔMacro-F1</th>
+            <th class="num">ΔWF1</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>MAL vs baseline</td><td class="num">+20.39</td><td class="num">+19.06</td><td class="num">+20.82</td><td class="num">+20.49</td></tr>
+          <tr><td>TIM vs baseline</td><td class="num">+22.88</td><td class="num">+20.44</td><td class="num">+23.62</td><td class="num">+23.14</td></tr>
+          <tr><td>TIM vs MAL</td><td class="num">+2.50</td><td class="num">+1.39</td><td class="num">+2.80</td><td class="num">+2.65</td></tr>
+        </tbody>
+      </table>
+
+      <p>
+        Kết quả tổng thể cho thấy memory theo dialogue tạo ra bước nhảy lớn so với baseline utterance-level.
+        TIM tiếp tục cải thiện trên MAL, nhưng mức tăng nhỏ hơn nhiều so với bước tăng từ baseline sang MAL.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>6. Per-class F1</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th class="num">angry</th>
+            <th class="num">happy</th>
+            <th class="num">neutral</th>
+            <th class="num">sad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Baseline</td><td class="num">50.66</td><td class="num">48.78</td><td class="num">52.56</td><td class="num">48.36</td></tr>
+          <tr><td>MAL</td><td class="num">75.98</td><td class="num">70.81</td><td class="num">71.19</td><td class="num">65.64</td></tr>
+          <tr><td>TIM</td><td class="num best">81.00</td><td class="num best">74.18</td><td class="num best">72.98</td><td class="num best">66.67</td></tr>
+        </tbody>
+      </table>
+
+      <p>
+        TIM đạt F1 cao nhất ở cả bốn class. Class <code>sad</code> vẫn là class khó nhất trong hai model memory,
+        còn baseline gần như không phân biệt tốt class nào.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>7. Subset metrics theo model</h2>
+      <p>
+        Bảng dưới đây được sắp theo đúng nhóm model: 6 dòng Baseline, 6 dòng MAL, 6 dòng TIM.
+        Các subset được định nghĩa từ temporal columns trong <code>wavlm_tim/predictions.csv</code> và join qua <code>utterance_id</code>
+        để chấm lại baseline/MAL trên cùng tập utterance.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Subset</th>
+            <th class="num">N</th>
+            <th class="num">WA</th>
+            <th class="num">UA</th>
+            <th class="num">Macro-F1</th>
+            <th class="num">WF1</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="group-start"><td>Baseline</td><td>no_overlap</td><td class="num">683</td><td class="num">50.07</td><td class="num">52.16</td><td class="num">49.48</td><td class="num">49.39</td></tr>
+          <tr><td>Baseline</td><td>overlap</td><td class="num">558</td><td class="num">50.72</td><td class="num">51.08</td><td class="num">48.92</td><td class="num">50.96</td></tr>
+          <tr><td>Baseline</td><td>strong_overlap</td><td class="num">241</td><td class="num">49.79</td><td class="num">42.30</td><td class="num">39.61</td><td class="num">49.51</td></tr>
+          <tr><td>Baseline</td><td>short_response</td><td class="num">132</td><td class="num">47.73</td><td class="num">56.34</td><td class="num">45.54</td><td class="num">49.75</td></tr>
+          <tr><td>Baseline</td><td>long_pause</td><td class="num">416</td><td class="num">50.48</td><td class="num">50.49</td><td class="num">49.11</td><td class="num">49.49</td></tr>
+          <tr><td>Baseline</td><td>speaker_switch</td><td class="num">739</td><td class="num">50.34</td><td class="num">52.35</td><td class="num">50.14</td><td class="num">50.38</td></tr>
+
+          <tr class="group-start"><td>MAL</td><td>no_overlap</td><td class="num">683</td><td class="num">69.40</td><td class="num">69.08</td><td class="num">68.63</td><td class="num">68.99</td></tr>
+          <tr><td>MAL</td><td>overlap</td><td class="num">558</td><td class="num">72.40</td><td class="num">74.13</td><td class="num">73.25</td><td class="num">72.77</td></tr>
+          <tr><td>MAL</td><td>strong_overlap</td><td class="num">241</td><td class="num">73.03</td><td class="num best">72.82</td><td class="num best">71.91</td><td class="num">73.62</td></tr>
+          <tr><td>MAL</td><td>short_response</td><td class="num">132</td><td class="num">73.48</td><td class="num best">79.66</td><td class="num">69.70</td><td class="num">74.55</td></tr>
+          <tr><td>MAL</td><td>long_pause</td><td class="num">416</td><td class="num">69.71</td><td class="num">67.63</td><td class="num">68.58</td><td class="num">69.11</td></tr>
+          <tr><td>MAL</td><td>speaker_switch</td><td class="num">739</td><td class="num">69.69</td><td class="num">71.80</td><td class="num">71.08</td><td class="num">70.04</td></tr>
+
+          <tr class="group-start"><td>TIM</td><td>no_overlap</td><td class="num">683</td><td class="num best">73.94</td><td class="num best">72.29</td><td class="num best">73.49</td><td class="num best">73.61</td></tr>
+          <tr><td>TIM</td><td>overlap</td><td class="num">558</td><td class="num best">72.40</td><td class="num best">74.13</td><td class="num best">73.94</td><td class="num best">72.88</td></tr>
+          <tr><td>TIM</td><td>strong_overlap</td><td class="num">241</td><td class="num best">73.86</td><td class="num">72.40</td><td class="num">71.15</td><td class="num best">74.26</td></tr>
+          <tr><td>TIM</td><td>short_response</td><td class="num">132</td><td class="num best">79.55</td><td class="num">77.40</td><td class="num best">77.38</td><td class="num best">79.65</td></tr>
+          <tr><td>TIM</td><td>long_pause</td><td class="num">416</td><td class="num best">73.32</td><td class="num best">71.06</td><td class="num best">72.52</td><td class="num best">72.88</td></tr>
+          <tr><td>TIM</td><td>speaker_switch</td><td class="num">739</td><td class="num best">70.91</td><td class="num best">72.81</td><td class="num best">72.65</td><td class="num best">71.32</td></tr>
+        </tbody>
+      </table>
+
+      <p class="muted">
+        Số in xanh là metric tốt nhất giữa ba model trên cùng subset.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>8. Phân tích kết quả</h2>
+
+      <h3>8.1 Memory là yếu tố tác động lớn nhất</h3>
+      <p>
+        Chênh lệch từ baseline sang MAL rất lớn: khoảng +20 điểm ở WA, UA, Macro-F1 và WF1.
+        Điều này cho thấy SER hội thoại hưởng lợi mạnh từ thứ tự utterance và trạng thái hội thoại,
+        ngay cả khi chưa dùng timing thật.
+      </p>
+
+      <h3>8.2 TIM cải thiện thêm nhưng không đồng đều ở mọi subset</h3>
+      <p>
+        TIM tốt nhất tổng thể và thắng phần lớn subset, đặc biệt ở <code>no_overlap</code>, <code>long_pause</code>,
+        và <code>speaker_switch</code>. Tuy nhiên, MAL cạnh tranh rất sát ở <code>overlap</code>,
+        và nhỉnh hơn TIM ở <code>strong_overlap</code> theo UA/Macro-F1 cũng như <code>short_response</code> theo UA.
+      </p>
+
+      <h3>8.3 Short response là vùng TIM mạnh nhất theo WA/WF1</h3>
+      <p>
+        Trên subset <code>short_response</code>, TIM đạt WA 79.55 và WF1 79.65, cao nhất trong các subset.
+        Điều này phù hợp với giả thuyết rằng response latency là tín hiệu hội thoại hữu ích cho cảm xúc.
+        Dù vậy, MAL lại có UA 79.66, nghĩa là phân bố recall theo class của MAL ở subset nhỏ này vẫn rất tốt.
+      </p>
+
+      <h3>8.4 Strong overlap còn chưa ổn định</h3>
+      <p>
+        Trên <code>strong_overlap</code>, TIM có WA/WF1 tốt nhất nhưng MAL có UA/Macro-F1 tốt hơn.
+        Vì subset này chỉ có 241 mẫu, sự khác biệt có thể nhạy với phân bố class.
+        Đây là nhóm nên xem confusion matrix hoặc per-class recall trước khi kết luận mạnh.
+      </p>
+
+      <h3>8.5 Lỗi chính vẫn là happy/neutral</h3>
+      <p>
+        Ở test tổng thể, lỗi lớn nhất của các mô hình memory vẫn là nhầm <code>happy -> neutral</code>.
+        TIM giảm nhiều lỗi cực đoan của baseline, nhưng ranh giới giữa happy và neutral vẫn là điểm yếu chính.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>9. Kết luận</h2>
+      <ul>
+        <li>Baseline WavLM utterance-level là control hợp lệ nhưng hiệu năng thấp, quanh 50 điểm F1.</li>
+        <li>WavLM + MAL chứng minh dialogue memory tạo cải thiện lớn nhất.</li>
+        <li>WavLM + TIM là mô hình tốt nhất tổng thể, đạt WA 73.25, UA 72.91, Macro-F1 73.71 và WF1 73.26.</li>
+        <li>Temporal features có giá trị bổ sung, nhưng mức cải thiện so với MAL vừa phải và phụ thuộc subset.</li>
+        <li>Nhóm subset nên phân tích sâu tiếp theo: <code>strong_overlap</code>, <code>short_response</code>, và các lỗi <code>happy -> neutral</code>.</li>
+      </ul>
+
+      <div class="note">
+        Kết luận ngắn: nếu chỉ xét kết quả tổng thể, TIM là lựa chọn tốt nhất. Nếu xét insight khoa học,
+        kết quả cho thấy memory hội thoại là thành phần nền tảng, còn temporal interaction features tạo thêm lợi ích
+        rõ nhất ở một số tình huống hội thoại cụ thể.
+      </div>
+    </section>
+  </main>
+</body>
+</html>

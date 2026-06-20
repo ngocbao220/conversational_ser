@@ -7,4 +7,4 @@ __pycache__/
 iemocap_export/
 outputs/
 iemocap/
-notebook/training.ipynb
+notebook/

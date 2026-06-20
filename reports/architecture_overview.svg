@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="380" viewBox="0 0 1120 380" role="img" aria-labelledby="title desc">
+  <title id="title">Overview of three SER experiment architectures</title>
+  <desc id="desc">Comparison of baseline, MAL, and TIM pipelines.</desc>
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .lane { fill: #f8fafc; stroke: #d9dee7; stroke-width: 1.2; }
+      .box { fill: #ffffff; stroke: #64748b; stroke-width: 1.5; rx: 8; }
+      .audio { fill: #e0f2fe; stroke: #0369a1; }
+      .memory { fill: #fef3c7; stroke: #b45309; }
+      .time { fill: #dcfce7; stroke: #15803d; }
+      .out { fill: #fee2e2; stroke: #b91c1c; }
+      .text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; fill: #18212f; font-size: 16px; font-weight: 650; }
+      .small { font-size: 13px; font-weight: 500; fill: #475569; }
+      .label { font-size: 18px; font-weight: 800; fill: #0f172a; }
+      .arrow { stroke: #334155; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+      .dash { stroke-dasharray: 5 5; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1120" height="380"/>
+
+  <rect class="lane" x="24" y="30" width="1072" height="88" rx="10"/>
+  <text class="label" x="44" y="64">Exp 1 - WavLM baseline</text>
+  <rect class="box audio" x="290" y="50" width="130" height="44" rx="8"/><text class="text" x="317" y="78">Audio</text>
+  <rect class="box audio" x="480" y="50" width="150" height="44" rx="8"/><text class="text" x="508" y="78">WavLM</text>
+  <rect class="box" x="690" y="50" width="170" height="44" rx="8"/><text class="text" x="715" y="78">Pooling + MLP</text>
+  <rect class="box out" x="920" y="50" width="130" height="44" rx="8"/><text class="text" x="950" y="78">Emotion</text>
+  <path class="arrow" d="M420 72 H480"/><path class="arrow" d="M630 72 H690"/><path class="arrow" d="M860 72 H920"/>
+
+  <rect class="lane" x="24" y="146" width="1072" height="88" rx="10"/>
+  <text class="label" x="44" y="180">Exp 2 - WavLM + MAL</text>
+  <rect class="box audio" x="250" y="166" width="150" height="44" rx="8"/><text class="text" x="274" y="194">WavLM emb</text>
+  <rect class="box memory" x="470" y="166" width="160" height="44" rx="8"/><text class="text" x="494" y="194">MAL memory</text>
+  <rect class="box" x="690" y="166" width="170" height="44" rx="8"/><text class="text" x="722" y="194">Classifier</text>
+  <rect class="box out" x="920" y="166" width="130" height="44" rx="8"/><text class="text" x="950" y="194">Emotion</text>
+  <path class="arrow" d="M400 188 H470"/><path class="arrow" d="M630 188 H690"/><path class="arrow" d="M860 188 H920"/>
+  <text class="small" x="470" y="225">reset per dialogue, read-before-write</text>
+
+  <rect class="lane" x="24" y="262" width="1072" height="88" rx="10"/>
+  <text class="label" x="44" y="296">Exp 3 - WavLM + TIM</text>
+  <rect class="box audio" x="220" y="282" width="140" height="44" rx="8"/><text class="text" x="242" y="310">WavLM emb</text>
+  <rect class="box time" x="400" y="282" width="165" height="44" rx="8"/><text class="text" x="421" y="310">Temporal MLP</text>
+  <rect class="box memory" x="610" y="282" width="145" height="44" rx="8"/><text class="text" x="632" y="310">TIM memory</text>
+  <rect class="box" x="800" y="282" width="120" height="44" rx="8"/><text class="text" x="826" y="310">Classifier</text>
+  <rect class="box out" x="965" y="282" width="95" height="44" rx="8"/><text class="text" x="982" y="310">Emotion</text>
+  <path class="arrow" d="M360 304 H400"/><path class="arrow" d="M565 304 H610"/><path class="arrow" d="M755 304 H800"/><path class="arrow" d="M920 304 H965"/>
+  <path class="arrow dash" d="M290 326 C390 360, 565 360, 682 326"/>
+  <text class="small" x="394" y="346">audio embedding + causal timing features</text>
+</svg>

@@ -14,7 +14,7 @@ dataset:
 model:
   wavlm_model_name: microsoft/wavlm-base
   num_labels: 4
-  pooling: attentive_statistics
+  pooling: mean
   dropout: 0.2
   freeze_wavlm: true
   unfreeze_last_n_layers: 0
