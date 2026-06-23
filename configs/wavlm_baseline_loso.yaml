@@ -1,0 +1,50 @@
+experiment_name: wavlm_baseline_loso
+output_dir: results/wavlm_baseline_loso
+seed: 42
+
+dataset:
+  iemocap_root: iemocap
+  auto_download: true
+  kaggle_dataset: sangayb/iemocap
+  test_session: 5
+  validation_ratio: 0.1
+  sampling_rate: 16000
+  max_duration_seconds: null
+
+model:
+  wavlm_model_name: microsoft/wavlm-base
+  num_labels: 4
+  pooling: mean
+  dropout: 0.2
+
+precompute:
+  enabled: true
+  pooling: mean
+  cache_path: results/wavlm_shared/cache/wavlm_mean_embeddings.pt
+  force_recompute: false
+  batch_size: 16
+
+cross_session:
+  enabled: true
+  test_sessions: [1, 2, 3, 4, 5]
+  run_name: null
+
+training:
+  device: auto
+  batch_size: 16
+  eval_batch_size: 16
+  max_epochs: 100
+  learning_rate_classifier: 0.0001
+  weight_decay: 0.01
+  scheduler: cosine
+  warmup_ratio: 0.1
+  gradient_clip: 1.0
+  num_workers: 0
+  progress_bar: true
+
+wandb:
+  use_wandb: true
+  project: conversational-SER
+  run_name: wavlm_baseline_loso
+  entity: null
+  mode: online
