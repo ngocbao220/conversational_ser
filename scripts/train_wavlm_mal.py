@@ -365,6 +365,12 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_config(args.config)
+    if bool(config.get("cross_session", {}).get("enabled", False)):
+        from scripts.run_cross_session import run_cross_session
+
+        summary_path = run_cross_session("scripts.train_wavlm_mal", args.config)
+        print(f"cross_session_summary={summary_path}")
+        return
     if bool(config["model"].get("use_temporal_features", False)) or str(config["model"].get("temporal_feature_mode")) != "zero":
         raise ValueError("Experiment 2 must use no real temporal features: set use_temporal_features=false and temporal_feature_mode=zero.")
     if not bool(config.get("precompute", {}).get("enabled", True)):

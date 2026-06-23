@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
-import math
 import os
 import random
 from pathlib import Path
@@ -11,11 +9,17 @@ from typing import Any, Dict, Mapping, Optional, Sequence
 import numpy as np
 import torch
 import yaml
-from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AutoFeatureExtractor, get_cosine_schedule_with_warmup, get_linear_schedule_with_warmup
+from transformers import get_cosine_schedule_with_warmup, get_linear_schedule_with_warmup
 
-from models.wavlm_baseline import WavLMSERBaseline, build_wavlm_ser_baseline
+from models.wavlm_baseline import MeanEmbeddingBaseline, build_mean_embedding_baseline
+from utils.dialogue_embeddings import (
+    DialogueEmbedding,
+    build_dialogue_embeddings,
+    load_embedding_cache,
+    precompute_wavlm_mean_embeddings,
+    save_embedding_cache,
+)
 from utils.experiment_metrics import (
     compute_ser_metrics,
     save_confusion_matrix_csv,
@@ -26,9 +30,6 @@ from utils.experiment_metrics import (
 from utils.iemocap_kaggle import (
     ID2LABEL,
     LABEL_NAMES,
-    ConversationalSERCollator,
-    ConversationalSERDataset,
-    ConversationSERSample,
     discover_iemocap_samples,
     split_loso_by_dialogue,
 )
@@ -70,26 +71,14 @@ def parameter_counts(model: torch.nn.Module) -> Dict[str, int]:
     return {"total": total, "trainable": trainable, "frozen": total - trainable}
 
 
-def create_optimizer(model: WavLMSERBaseline, config: Mapping[str, Any]) -> torch.optim.Optimizer:
+def create_optimizer(model: MeanEmbeddingBaseline, config: Mapping[str, Any]) -> torch.optim.Optimizer:
     training_cfg = config["training"]
     classifier_lr = float(training_cfg.get("learning_rate_classifier", 1e-4))
-    wavlm_lr = float(training_cfg.get("learning_rate_wavlm", 1e-5))
     weight_decay = float(training_cfg.get("weight_decay", 0.01))
-
-    wavlm_params = [parameter for parameter in model.wavlm.parameters() if parameter.requires_grad]
-    head_params = [
-        parameter
-        for name, parameter in model.named_parameters()
-        if parameter.requires_grad and not name.startswith("wavlm.")
-    ]
-    param_groups = []
-    if head_params:
-        param_groups.append({"params": head_params, "lr": classifier_lr, "name": "classifier"})
-    if wavlm_params:
-        param_groups.append({"params": wavlm_params, "lr": wavlm_lr, "name": "wavlm"})
-    if not param_groups:
+    trainable_params = [parameter for parameter in model.parameters() if parameter.requires_grad]
+    if not trainable_params:
         raise RuntimeError("No trainable parameters found.")
-    return torch.optim.AdamW(param_groups, weight_decay=weight_decay)
+    return torch.optim.AdamW(trainable_params, lr=classifier_lr, weight_decay=weight_decay)
 
 
 def create_scheduler(optimizer: torch.optim.Optimizer, config: Mapping[str, Any], total_steps: int):
@@ -129,10 +118,20 @@ def init_wandb(config: Mapping[str, Any], output_dir: Path, log_path: Path):
         return None
 
 
-def make_dataloaders(config: Mapping[str, Any]):
+def cache_is_compatible(cache: Mapping[str, Any], config: Mapping[str, Any], expected_utterances: int) -> bool:
+    metadata = cache.get("metadata", {})
+    return (
+        metadata.get("wavlm_model_name") == config["model"].get("wavlm_model_name")
+        and int(metadata.get("sampling_rate", -1)) == int(config["dataset"].get("sampling_rate", 16000))
+        and int(metadata.get("num_utterances", -1)) == int(expected_utterances)
+        and metadata.get("pooling") == "mean"
+    )
+
+
+def prepare_dialogues(config: Mapping[str, Any], device: torch.device, log_path: Path):
     dataset_cfg = config["dataset"]
     model_cfg = config["model"]
-    training_cfg = config["training"]
+    embedding_cfg = config["precompute"]
     samples = discover_iemocap_samples(
         dataset_cfg["iemocap_root"],
         auto_download=bool(dataset_cfg.get("auto_download", False)),
@@ -144,50 +143,53 @@ def make_dataloaders(config: Mapping[str, Any]):
         validation_ratio=float(dataset_cfg.get("validation_ratio", 0.1)),
         seed=int(config.get("seed", 42)),
     )
-    feature_extractor = AutoFeatureExtractor.from_pretrained(model_cfg["wavlm_model_name"])
-    collator = ConversationalSERCollator(feature_extractor, sampling_rate=int(dataset_cfg.get("sampling_rate", 16000)))
+    all_split_samples = [sample for split_samples in splits.values() for sample in split_samples]
+    cache_path = Path(str(embedding_cfg.get("cache_path", Path(config["output_dir"]) / "cache" / "wavlm_mean_embeddings.pt")))
+    force_recompute = bool(embedding_cfg.get("force_recompute", False))
+    cache = None
+    if cache_path.exists() and not force_recompute:
+        cache = load_embedding_cache(cache_path)
+        if not cache_is_compatible(cache, config, expected_utterances=len(all_split_samples)):
+            append_log(log_path, f"embedding cache incompatible, recomputing: {cache_path}")
+            cache = None
 
-    def dataset_for(rows: Sequence[ConversationSERSample]) -> ConversationalSERDataset:
-        return ConversationalSERDataset(
-            rows,
+    if cache is None:
+        append_log(log_path, "precompute_mode=fixed_mean_pooled_wavlm")
+        rows_by_utterance = precompute_wavlm_mean_embeddings(
+            all_split_samples,
+            wavlm_model_name=str(model_cfg["wavlm_model_name"]),
             sampling_rate=int(dataset_cfg.get("sampling_rate", 16000)),
+            batch_size=int(embedding_cfg.get("batch_size", config["training"].get("eval_batch_size", 16))),
+            num_workers=int(config["training"].get("num_workers", 0)),
+            device=device,
             max_duration_seconds=dataset_cfg.get("max_duration_seconds"),
+            progress=bool(config["training"].get("progress_bar", True)),
         )
+        save_embedding_cache(
+            cache_path,
+            rows_by_utterance,
+            {
+                "wavlm_model_name": str(model_cfg["wavlm_model_name"]),
+                "sampling_rate": int(dataset_cfg.get("sampling_rate", 16000)),
+                "num_utterances": len(all_split_samples),
+                "pooling": "mean",
+                "frozen_wavlm": True,
+            },
+        )
+    else:
+        append_log(log_path, f"loaded_embedding_cache={cache_path}")
+        rows_by_utterance = cache["rows_by_utterance"]
 
-    train_loader = DataLoader(
-        dataset_for(splits["train"]),
-        batch_size=int(training_cfg.get("batch_size", 16)),
-        shuffle=True,
-        num_workers=int(training_cfg.get("num_workers", 0)),
-        collate_fn=collator,
-    )
-    val_loader = DataLoader(
-        dataset_for(splits["validation"]),
-        batch_size=int(training_cfg.get("eval_batch_size", training_cfg.get("batch_size", 16))),
-        shuffle=False,
-        num_workers=int(training_cfg.get("num_workers", 0)),
-        collate_fn=collator,
-    )
-    test_loader = DataLoader(
-        dataset_for(splits["test"]),
-        batch_size=int(training_cfg.get("eval_batch_size", training_cfg.get("batch_size", 16))),
-        shuffle=False,
-        num_workers=int(training_cfg.get("num_workers", 0)),
-        collate_fn=collator,
-    )
-    return train_loader, val_loader, test_loader, splits
-
-
-def batch_to_device(batch: Mapping[str, Any], device: torch.device) -> Dict[str, Any]:
-    moved: Dict[str, Any] = {}
-    for key, value in batch.items():
-        moved[key] = value.to(device) if isinstance(value, torch.Tensor) else value
-    return moved
+    dialogue_splits = {
+        split_name: build_dialogue_embeddings(split_samples, rows_by_utterance)
+        for split_name, split_samples in splits.items()
+    }
+    return dialogue_splits, splits
 
 
 def run_epoch(
-    model: WavLMSERBaseline,
-    dataloader: DataLoader,
+    model: MeanEmbeddingBaseline,
+    dialogues: Sequence[DialogueEmbedding],
     device: torch.device,
     optimizer: Optional[torch.optim.Optimizer] = None,
     scheduler: Optional[Any] = None,
@@ -197,25 +199,20 @@ def run_epoch(
 ) -> Dict[str, Any]:
     is_train = optimizer is not None
     model.train(is_train)
+    dialogue_order = list(dialogues)
+    if is_train:
+        random.shuffle(dialogue_order)
     losses: list[float] = []
     targets: list[int] = []
     predictions: list[int] = []
     prediction_rows: list[Dict[str, Any]] = []
-    iterator = tqdm(dataloader, desc=description, disable=not progress, dynamic_ncols=True)
+    iterator = tqdm(dialogue_order, desc=description, disable=not progress, dynamic_ncols=True)
 
-    for batch in iterator:
-        batch = batch_to_device(batch, device)
-        labels = batch["labels"]
+    for dialogue in iterator:
+        embeddings = dialogue.embeddings.to(device)
+        labels = dialogue.labels.to(device)
         with torch.set_grad_enabled(is_train):
-            output = model(
-                input_values=batch["input_values"],
-                attention_mask=batch.get("attention_mask"),
-                labels=labels,
-                dialogue_id=batch.get("dialogue_id"),
-                speaker_id=batch.get("speaker_id"),
-                start_time=batch.get("start_time"),
-                end_time=batch.get("end_time"),
-            )
+            output = model(embeddings=embeddings, labels=labels)
             loss = output["loss"]
             if is_train:
                 loss.backward()
@@ -234,12 +231,13 @@ def run_epoch(
         targets.extend(int(value) for value in batch_targets)
 
         for index, pred_id in enumerate(batch_predictions):
+            row = dialogue.rows[index]
             row = {
-                "dialogue_id": batch["dialogue_id"][index],
-                "utterance_id": batch["utterance_id"][index],
-                "speaker_id": batch["speaker_id"][index],
-                "start_time": float(batch["start_time"][index].detach().cpu().item()),
-                "end_time": float(batch["end_time"][index].detach().cpu().item()),
+                "dialogue_id": row["dialogue_id"],
+                "utterance_id": row["utterance_id"],
+                "speaker_id": row["speaker_id"],
+                "start_time": float(row["start_time"]),
+                "end_time": float(row["end_time"]),
                 "gold_label": ID2LABEL[int(batch_targets[index])],
                 "pred_label": ID2LABEL[int(pred_id)],
             }
@@ -258,7 +256,7 @@ def run_epoch(
     }
 
 
-def save_checkpoint(path: Path, model: WavLMSERBaseline, config: Mapping[str, Any], epoch: int, metrics: Mapping[str, Any]) -> None:
+def save_checkpoint(path: Path, model: MeanEmbeddingBaseline, config: Mapping[str, Any], epoch: int, metrics: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
@@ -274,11 +272,21 @@ def save_checkpoint(path: Path, model: WavLMSERBaseline, config: Mapping[str, An
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train WavLM SER baseline without MAL/TIM.")
+    parser = argparse.ArgumentParser(description="Train a fixed mean-pooled WavLM embedding baseline without MAL/TIM.")
     parser.add_argument("--config", default="configs/wavlm_baseline_no_mal_no_tim.yaml")
     args = parser.parse_args()
 
     config = load_config(args.config)
+    if bool(config.get("cross_session", {}).get("enabled", False)):
+        from scripts.run_cross_session import run_cross_session
+
+        summary_path = run_cross_session("scripts.train_wavlm_baseline", args.config)
+        print(f"cross_session_summary={summary_path}")
+        return
+    if str(config["model"].get("pooling", "mean")) != "mean":
+        raise ValueError("Cached baseline requires model.pooling=mean to match MAL/TIM embeddings.")
+    if not bool(config.get("precompute", {}).get("enabled", True)):
+        raise ValueError("Cached baseline requires precompute.enabled=true.")
     set_seed(int(config.get("seed", 42)))
     output_dir = Path(config["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -286,23 +294,21 @@ def main() -> None:
     log_path.write_text("", encoding="utf-8")
     save_json(output_dir / "config.json", config)
 
-    train_loader, val_loader, test_loader, splits = make_dataloaders(config)
     device = resolve_device(str(config["training"].get("device", "auto")))
-    model = build_wavlm_ser_baseline(config["model"]).to(device)
+    dialogue_splits, splits = prepare_dialogues(config, device, log_path)
+    train_dialogues = dialogue_splits["train"]
+    val_dialogues = dialogue_splits["validation"]
+    test_dialogues = dialogue_splits["test"]
+    embedding_dim = int(train_dialogues[0].embeddings.shape[-1])
+    model = build_mean_embedding_baseline(config["model"], embedding_dim=embedding_dim).to(device)
     counts = parameter_counts(model)
     append_log(log_path, f"experiment={config['experiment_name']}")
     append_log(log_path, f"splits train={len(splits['train'])} validation={len(splits['validation'])} test={len(splits['test'])}")
+    append_log(log_path, f"embedding_dim={embedding_dim} pooling=mean frozen_wavlm=true")
     append_log(log_path, f"parameters total={counts['total']:,} trainable={counts['trainable']:,}")
-    append_log(
-        log_path,
-        (
-            f"freeze_wavlm={config['model']['freeze_wavlm']} "
-            f"unfreeze_last_n_layers={config['model']['unfreeze_last_n_layers']}"
-        ),
-    )
 
     optimizer = create_optimizer(model, config)
-    total_steps = max(1, len(train_loader) * int(config["training"].get("max_epochs", 10)))
+    total_steps = max(1, len(train_dialogues) * int(config["training"].get("max_epochs", 10)))
     scheduler = create_scheduler(optimizer, config, total_steps)
     wandb_run = init_wandb(config, output_dir, log_path)
 
@@ -316,7 +322,7 @@ def main() -> None:
     for epoch in range(1, max_epochs + 1):
         train_output = run_epoch(
             model,
-            train_loader,
+            train_dialogues,
             device,
             optimizer=optimizer,
             scheduler=scheduler,
@@ -326,7 +332,7 @@ def main() -> None:
         )
         val_output = run_epoch(
             model,
-            val_loader,
+            val_dialogues,
             device,
             progress=progress,
             description=f"{config['experiment_name']} epoch {epoch}/{max_epochs} validation",
@@ -368,7 +374,7 @@ def main() -> None:
     model.load_state_dict(checkpoint["model_state_dict"])
     test_output = run_epoch(
         model,
-        test_loader,
+        test_dialogues,
         device,
         progress=progress,
         description=f"{config['experiment_name']} test",

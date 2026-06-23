@@ -23,9 +23,14 @@ model:
 precompute:
   enabled: true
   pooling: mean
-  cache_path: results/wavlm_mal_no_tim/cache/wavlm_mean_embeddings.pt
+  cache_path: results/wavlm_shared/cache/wavlm_mean_embeddings.pt
   force_recompute: false
   batch_size: 16
+
+cross_session:
+  enabled: false
+  test_sessions: [1, 2, 3, 4, 5]
+  run_name: null
 
 training:
   device: auto

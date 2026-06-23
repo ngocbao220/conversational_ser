@@ -122,6 +122,24 @@ class WavLMSERBaseline(nn.Module):
         return result
 
 
+class MeanEmbeddingBaseline(nn.Module):
+    """Linear SER baseline over fixed mean-pooled WavLM embeddings."""
+
+    def __init__(self, embedding_dim: int, num_labels: int = 4, dropout: float = 0.2) -> None:
+        super().__init__()
+        self.classifier = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(int(embedding_dim), int(num_labels)),
+        )
+
+    def forward(self, embeddings: torch.Tensor, labels: Optional[torch.Tensor] = None) -> dict:
+        logits = self.classifier(embeddings)
+        output = {"logits": logits}
+        if labels is not None:
+            output["loss"] = torch.nn.functional.cross_entropy(logits, labels)
+        return output
+
+
 def build_wavlm_ser_baseline(model_cfg: dict) -> WavLMSERBaseline:
     config = WavLMSERBaselineConfig(
         wavlm_model_name=str(model_cfg.get("wavlm_model_name", "microsoft/wavlm-base")),
@@ -132,3 +150,11 @@ def build_wavlm_ser_baseline(model_cfg: dict) -> WavLMSERBaseline:
         unfreeze_last_n_layers=int(model_cfg.get("unfreeze_last_n_layers", 0)),
     )
     return WavLMSERBaseline(config)
+
+
+def build_mean_embedding_baseline(model_cfg: dict, embedding_dim: int) -> MeanEmbeddingBaseline:
+    return MeanEmbeddingBaseline(
+        embedding_dim=embedding_dim,
+        num_labels=int(model_cfg.get("num_labels", 4)),
+        dropout=float(model_cfg.get("dropout", 0.2)),
+    )

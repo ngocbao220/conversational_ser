@@ -386,6 +386,12 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_config(args.config)
+    if bool(config.get("cross_session", {}).get("enabled", False)):
+        from scripts.run_cross_session import run_cross_session
+
+        summary_path = run_cross_session("scripts.train_wavlm_tim", args.config)
+        print(f"cross_session_summary={summary_path}")
+        return
     if not bool(config["model"].get("use_temporal_features", False)) or str(config["model"].get("temporal_feature_mode")) != "real":
         raise ValueError("Experiment 3 must use real temporal features: set use_temporal_features=true and temporal_feature_mode=real.")
     if int(config["model"].get("temporal_feature_dim", 16)) != len(TEMPORAL_FEATURE_NAMES):

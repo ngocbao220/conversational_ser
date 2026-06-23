@@ -16,8 +16,18 @@ model:
   num_labels: 4
   pooling: mean
   dropout: 0.2
-  freeze_wavlm: true
-  unfreeze_last_n_layers: 0
+
+precompute:
+  enabled: true
+  pooling: mean
+  cache_path: results/wavlm_shared/cache/wavlm_mean_embeddings.pt
+  force_recompute: false
+  batch_size: 16
+
+cross_session:
+  enabled: false
+  test_sessions: [1, 2, 3, 4, 5]
+  run_name: null
 
 training:
   device: auto
@@ -25,7 +35,6 @@ training:
   eval_batch_size: 16
   max_epochs: 100
   learning_rate_classifier: 0.0001
-  learning_rate_wavlm: 0.00001
   weight_decay: 0.01
   scheduler: cosine
   warmup_ratio: 0.1
