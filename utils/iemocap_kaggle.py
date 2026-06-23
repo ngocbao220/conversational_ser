@@ -17,14 +17,23 @@ from torch.utils.data import Dataset
 LABEL_NAMES = ["angry", "happy", "neutral", "sad"]
 LABEL2ID = {"angry": 0, "happy": 1, "neutral": 2, "sad": 3}
 ID2LABEL = {idx: label for label, idx in LABEL2ID.items()}
+LABEL_MAPPING_VERSION = "iemocap_emotion_8_to_4_v1"
 
+# Every emotion label with a semantic 4-class destination is retained.
+# `xxx` means annotators did not agree and `oth` has no defensible 4-class
+# target, so neither may be used as a supervised gold label.
 RAW_LABEL_MAP = {
     "ang": "angry",
+    "fru": "angry",
+    "dis": "angry",
     "hap": "happy",
     "exc": "happy",
+    "sur": "happy",
     "neu": "neutral",
     "sad": "sad",
+    "fea": "sad",
 }
+UNLABELED_RAW_LABELS = {"xxx", "oth"}
 
 EVAL_RE = re.compile(
     r"^\[(?P<start>\d+(?:\.\d+)?)\s*-\s*(?P<end>\d+(?:\.\d+)?)\]\s+"

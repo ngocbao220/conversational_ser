@@ -10,10 +10,10 @@ Dataset:
 - Each sample should contain utterance audio, transcript if available, original label, and mapped label.
 - Map labels to 4 classes:
   - neutral -> neutral
-  - happy, excited -> happy
-  - sad -> sad
-  - angry, frustrated -> angry
-  - other/minor/unclear/tie labels -> drop
+  - happy, excited, surprise -> happy
+  - sad, fear -> sad
+  - angry, frustrated, disgust -> angry
+  - `other` and `xxx`/unclear labels -> no supervised target
 
 Baseline B0:
 audio utterance

@@ -21,23 +21,25 @@ fi
 
 # Model/version folder inside the shared Hugging Face repo.
 # Override examples:
-#   ./download.sh --model b0
-#   MODEL_NAME=b0 ./download.sh
-MODEL_NAME="${MODEL_NAME:-b0}"
+#   ./scripts/download.sh --model wavlm_tim
+#   MODEL_NAME=wavlm_tim ./scripts/download.sh
+MODEL_NAME="${MODEL_NAME:-wavlm_tim}"
 
 HF_REPO_ID="${HF_REPO_ID:-ngocbao05/ser}"
 PATH_IN_REPO="${PATH_IN_REPO:-$MODEL_NAME}"
 REPO_TYPE="${REPO_TYPE:-model}"
 REVISION="${REVISION:-main}"
 
-# Download target. Final checkpoint path defaults to:
-#   outputs/hf_checkpoints/<MODEL_NAME>/best.pt
-DOWNLOAD_ROOT="${DOWNLOAD_ROOT:-outputs/hf_checkpoints}"
+# Download target. Repository folders are preserved under this root.
+# Final checkpoint path defaults to `results/wavlm_tim/best.pth`.
+DOWNLOAD_ROOT="${DOWNLOAD_ROOT:-results}"
 LOCAL_MODEL_DIR="${LOCAL_MODEL_DIR:-$DOWNLOAD_ROOT/$MODEL_NAME}"
-CHECKPOINT_NAME="${CHECKPOINT_NAME:-best.pt}"
+CHECKPOINT_NAME="${CHECKPOINT_NAME:-best.pth}"
 
 # Evaluation parameters.
-RUN_EVAL="${RUN_EVAL:-true}"
+# The bundled evaluator is for legacy B0 checkpoints. Keep download independent
+# so WavLM/MAL/TIM artifact downloads do not fail after completing.
+RUN_EVAL="${RUN_EVAL:-false}"
 SPLIT="${SPLIT:-test}"
 EVAL_OUTPUT="${EVAL_OUTPUT:-$LOCAL_MODEL_DIR/${SPLIT}_metrics.json}"
 DEVICE="${DEVICE:-auto}"
@@ -68,16 +70,17 @@ FORCE_DOWNLOAD="${FORCE_DOWNLOAD:-false}"
 usage() {
   cat <<'EOF'
 Usage:
-  ./download.sh [--model MODEL_NAME] [--repo-id OWNER/REPO] [--download-root PATH]
+  ./scripts/download.sh [--model MODEL_NAME] [--repo-id OWNER/REPO] [--download-root PATH]
 
 Environment overrides:
-  MODEL_NAME=b0
+  MODEL_NAME=wavlm_tim
   HF_REPO_ID=ngocbao05/ser
-  PATH_IN_REPO=b0
-  DOWNLOAD_ROOT=outputs/hf_checkpoints
+  PATH_IN_REPO=wavlm_tim
+  DOWNLOAD_ROOT=results
+  CHECKPOINT_NAME=best.pth
   SPLIT_STRATEGY=random
   TEST_SESSION=Ses05
-  RUN_EVAL=true
+  RUN_EVAL=false
   SPLIT=test
   DEVICE=auto
   FORCE_DOWNLOAD=false
@@ -157,6 +160,14 @@ while [[ $# -gt 0 ]]; do
       EVAL_OUTPUT="$LOCAL_MODEL_DIR/${SPLIT}_metrics.json"
       shift
       ;;
+    --checkpoint-name)
+      CHECKPOINT_NAME="$2"
+      shift 2
+      ;;
+    --checkpoint-name=*)
+      CHECKPOINT_NAME="${1#--checkpoint-name=}"
+      shift
+      ;;
     --split)
       SPLIT="$2"
       EVAL_OUTPUT="$LOCAL_MODEL_DIR/${SPLIT}_metrics.json"
@@ -212,6 +223,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ "$PATH_IN_REPO" == /* || "$PATH_IN_REPO" == *".."* ]]; then
+  echo "PATH_IN_REPO must be a relative repository folder: $PATH_IN_REPO" >&2
+  exit 2
+fi
+
 if [[ -z "$SPLIT_STRATEGY" ]]; then
   case "$MODEL_NAME" in
     b01)
@@ -232,16 +248,17 @@ mkdir -p "$DOWNLOAD_ROOT"
 
 DOWNLOAD_ARGS=(
   "$HF_REPO_ID"
-  "$PATH_IN_REPO/"
   --repo-type "$REPO_TYPE"
   --revision "$REVISION"
   --local-dir "$DOWNLOAD_ROOT"
+  --include "$PATH_IN_REPO/**"
+  --exclude "$PATH_IN_REPO/wandb/**"
 )
 if [[ "$FORCE_DOWNLOAD" == "true" ]]; then
   DOWNLOAD_ARGS+=(--force-download)
 fi
 
-echo "Downloading Hugging Face repo path $HF_REPO_ID/$PATH_IN_REPO to $DOWNLOAD_ROOT"
+echo "Downloading Hugging Face repo folder $HF_REPO_ID/$PATH_IN_REPO to $DOWNLOAD_ROOT/$PATH_IN_REPO"
 hf download "${DOWNLOAD_ARGS[@]}"
 
 CHECKPOINT="$LOCAL_MODEL_DIR/$CHECKPOINT_NAME"

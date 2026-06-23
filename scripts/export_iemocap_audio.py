@@ -11,7 +11,7 @@ import numpy as np
 import soundfile as sf
 from datasets import Audio, Dataset, DatasetDict, load_dataset
 
-from utils.dataset import get_canonical_label, get_transcript
+from utils.dataset import LABEL_MAPPING_VERSION, get_canonical_label, get_transcript
 
 
 ID_COLUMNS = (
@@ -165,6 +165,7 @@ def export_dataset(args: argparse.Namespace) -> None:
                 "transcript": get_transcript(example),
                 "original_label": raw_label(example),
                 "mapped_label": get_canonical_label(example) or "",
+                "label_mapping_version": LABEL_MAPPING_VERSION,
                 **parsed,
             }
             rows.append(row)

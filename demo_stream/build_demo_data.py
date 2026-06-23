@@ -12,13 +12,35 @@ OUT_DIR = Path(__file__).resolve().parent
 
 METADATA_PATH = ROOT / "iemocap_export" / "metadata.csv"
 IEMOCAP_ROOT = ROOT / "iemocap"
-PREDICTION_FILES = {
-    "baseline": ROOT / "outputs" / "hf_checkpoints" / "wavlm_baseline_no_mal_no_tim" / "predictions.csv",
-    "mal": ROOT / "outputs" / "hf_checkpoints" / "wavlm_mal_no_tim" / "predictions.csv",
-    "tim": ROOT / "outputs" / "hf_checkpoints" / "wavlm_tim" / "predictions.csv",
+PREDICTION_CANDIDATES = {
+    "baseline": (
+        ROOT / "results" / "wavlm_no_mal_no_tim" / "predictions.csv",
+        ROOT / "results" / "wavlm_baseline_no_mal_no_tim" / "predictions.csv",
+        ROOT / "outputs" / "hf_checkpoints" / "wavlm_baseline_no_mal_no_tim" / "predictions.csv",
+    ),
+    "mal": (
+        ROOT / "results" / "wavlm_mal_no_tim" / "predictions.csv",
+        ROOT / "outputs" / "hf_checkpoints" / "wavlm_mal_no_tim" / "predictions.csv",
+    ),
+    "tim": (
+        ROOT / "results" / "wavlm_tim" / "predictions.csv",
+        ROOT / "outputs" / "hf_checkpoints" / "wavlm_tim" / "predictions.csv",
+    ),
 }
 LABELS = ("angry", "happy", "neutral", "sad")
 TARGET_SESSIONS = {"Ses05"}
+METADATA_LABEL_MAP = {
+    "neutral": "neutral",
+    "happy": "happy",
+    "excited": "happy",
+    "surprise": "happy",
+    "sad": "sad",
+    "fear": "sad",
+    "angry": "angry",
+    "frustrated": "angry",
+    "disgust": "angry",
+    "disgusted": "angry",
+}
 TRANSCRIPT_LINE = re.compile(
     r"^(?P<utterance_id>\S+)\s+\[(?P<start>\d+(?:\.\d+)?)-(?P<end>\d+(?:\.\d+)?)\]:\s*(?P<text>.*)$"
 )
@@ -32,6 +54,17 @@ def read_csv_by_utterance(path: Path) -> dict[str, dict[str, str]]:
 def read_csv_rows(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
+
+
+def resolve_prediction_files() -> dict[str, Path]:
+    resolved = {}
+    for model_name, candidates in PREDICTION_CANDIDATES.items():
+        path = next((candidate for candidate in candidates if candidate.exists()), None)
+        if path is not None:
+            resolved[model_name] = path
+        else:
+            print(f"No predictions found for {model_name}; checked: {', '.join(str(path.relative_to(ROOT)) for path in candidates)}")
+    return resolved
 
 
 def read_transcription_times(session_ids: set[str]) -> dict[str, dict[str, object]]:
@@ -63,6 +96,10 @@ def as_float(value: str | None, default: float = 0.0) -> float:
         return float(value)
     except ValueError:
         return default
+
+
+def canonical_metadata_label(row: dict[str, str]) -> str:
+    return METADATA_LABEL_MAP.get(str(row.get("original_label", "")).strip().lower(), "")
 
 
 def prediction_payload(row: dict[str, str] | None) -> dict[str, object] | None:
@@ -121,10 +158,10 @@ def main() -> None:
     ]
     metadata = {row["utterance_id"]: row for row in metadata_rows}
     transcription_times = read_transcription_times(TARGET_SESSIONS)
+    prediction_files = resolve_prediction_files()
     predictions = {
         model_name: read_csv_by_utterance(path)
-        for model_name, path in PREDICTION_FILES.items()
-        if path.exists()
+        for model_name, path in prediction_files.items()
     }
 
     items: list[dict[str, object]] = []
@@ -143,7 +180,7 @@ def main() -> None:
         dialogue_id = meta.get("dialogue_id") or first_pred.get("dialogue_id", "")
         session_id = meta.get("session_id") or dialogue_id[:5]
         speaker_id = meta.get("speaker_id") or first_pred.get("speaker_id", "")
-        gold_label = meta.get("mapped_label") or first_pred.get("gold_label", "")
+        gold_label = first_pred.get("gold_label") or canonical_metadata_label(meta)
         turn_index = meta.get("turn_index", "")
 
         model_predictions = {}
@@ -209,7 +246,7 @@ def main() -> None:
         "generated_from": {
             "metadata": str(METADATA_PATH.relative_to(ROOT)),
             "predictions": {
-                model: str(path.relative_to(ROOT)) for model, path in PREDICTION_FILES.items()
+                model: str(path.relative_to(ROOT)) for model, path in prediction_files.items()
             },
         },
         "models": [

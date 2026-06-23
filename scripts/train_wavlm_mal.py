@@ -28,7 +28,7 @@ from utils.experiment_metrics import (
     save_json,
     save_predictions_csv,
 )
-from utils.iemocap_kaggle import ID2LABEL, LABEL_NAMES, discover_iemocap_samples, split_loso_by_dialogue
+from utils.iemocap_kaggle import LABEL_MAPPING_VERSION, ID2LABEL, LABEL_NAMES, discover_iemocap_samples, split_loso_by_dialogue
 
 
 def load_config(path: str | Path) -> Dict[str, Any]:
@@ -118,6 +118,7 @@ def cache_is_compatible(cache: Mapping[str, Any], config: Mapping[str, Any], exp
         metadata.get("wavlm_model_name") == config["model"].get("wavlm_model_name")
         and int(metadata.get("sampling_rate", -1)) == int(config["dataset"].get("sampling_rate", 16000))
         and int(metadata.get("num_utterances", -1)) == int(expected_utterances)
+        and metadata.get("label_mapping_version") == LABEL_MAPPING_VERSION
     )
 
 
@@ -162,6 +163,7 @@ def prepare_dialogues(config: Mapping[str, Any], device: torch.device, log_path:
             "num_utterances": len(all_split_samples),
             "pooling": "mean",
             "frozen_wavlm": True,
+            "label_mapping_version": LABEL_MAPPING_VERSION,
         }
         save_embedding_cache(cache_path, rows_by_utterance, metadata)
     else:

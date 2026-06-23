@@ -12,15 +12,20 @@ from datasets import Audio, Dataset, DatasetDict, Features, Sequence, Value, loa
 CANONICAL_LABELS = ["neutral", "happy", "sad", "angry"]
 LABEL2ID = {label: idx for idx, label in enumerate(CANONICAL_LABELS)}
 ID2LABEL = {idx: label for label, idx in LABEL2ID.items()}
+LABEL_MAPPING_VERSION = "iemocap_emotion_8_to_4_v1"
 
 # Keep this mapping explicit so later experiments can change the 8-to-4 policy.
 EMOTION_TO_CANONICAL = {
     "neutral": "neutral",
     "happy": "happy",
     "excited": "happy",
+    "surprise": "happy",
     "sad": "sad",
+    "fear": "sad",
     "angry": "angry",
     "frustrated": "angry",
+    "disgust": "angry",
+    "disgusted": "angry",
 }
 
 SKIP_LABELS = {
@@ -30,9 +35,6 @@ SKIP_LABELS = {
     "ambiguous",
     "unknown",
     "other",
-    "fear",
-    "surprise",
-    "disgust",
 }
 
 EMOTION_SCORE_COLUMNS = [

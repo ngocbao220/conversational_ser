@@ -29,6 +29,7 @@ from utils.experiment_metrics import (
 )
 from utils.iemocap_kaggle import (
     ID2LABEL,
+    LABEL_MAPPING_VERSION,
     LABEL_NAMES,
     discover_iemocap_samples,
     split_loso_by_dialogue,
@@ -125,6 +126,7 @@ def cache_is_compatible(cache: Mapping[str, Any], config: Mapping[str, Any], exp
         and int(metadata.get("sampling_rate", -1)) == int(config["dataset"].get("sampling_rate", 16000))
         and int(metadata.get("num_utterances", -1)) == int(expected_utterances)
         and metadata.get("pooling") == "mean"
+        and metadata.get("label_mapping_version") == LABEL_MAPPING_VERSION
     )
 
 
@@ -174,6 +176,7 @@ def prepare_dialogues(config: Mapping[str, Any], device: torch.device, log_path:
                 "num_utterances": len(all_split_samples),
                 "pooling": "mean",
                 "frozen_wavlm": True,
+                "label_mapping_version": LABEL_MAPPING_VERSION,
             },
         )
     else:
