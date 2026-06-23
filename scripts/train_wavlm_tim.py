@@ -272,6 +272,95 @@ def run_dialogue_epoch(
     }
 
 
+def select_debug_dialogue(
+    dialogue_splits: Mapping[str, Sequence[DialogueEmbedding]],
+    split_name: str,
+    dialogue_id: Optional[str] = None,
+) -> DialogueEmbedding:
+    dialogues = list(dialogue_splits[split_name])
+    if not dialogues:
+        raise ValueError(f"No dialogues available for debug split={split_name!r}.")
+    if dialogue_id is None:
+        return dialogues[0]
+    for dialogue in dialogues:
+        if dialogue.dialogue_id == dialogue_id:
+            return dialogue
+    raise ValueError(f"dialogue_id={dialogue_id!r} not found in split={split_name!r}.")
+
+
+def save_memory_trace_csv(path: str | Path, rows: Sequence[Mapping[str, Any]]) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "experiment",
+        "split",
+        "dialogue_id",
+        "turn_index",
+        "utterance_id",
+        "start_time",
+        "end_time",
+        "memory_state_norm_before",
+        "memory_state_norm_after",
+        "gold_label",
+        "pred_label",
+    ]
+    append = path.exists() and path.stat().st_size > 0
+    with path.open("a" if append else "w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        if not append:
+            writer.writeheader()
+        for row in rows:
+            writer.writerow({key: row.get(key, "") for key in fieldnames})
+
+
+def trace_tim_dialogue_memory(
+    model: WavLMTIMSerModel,
+    dialogue: DialogueEmbedding,
+    temporal_builder: TemporalInteractionFeatureBuilder,
+    device: torch.device,
+    experiment_name: str,
+    split_name: str,
+) -> list[Dict[str, Any]]:
+    model.eval()
+    trace_rows: list[Dict[str, Any]] = []
+    embeddings = dialogue.embeddings.to(device)
+    labels = dialogue.labels.to(device)
+    temporal_features = temporal_builder.transform_dialogue(dialogue).to(device)
+    memory = model.memory
+    state = memory.initial_state(device=embeddings.device, dtype=embeddings.dtype)
+
+    with torch.no_grad():
+        temporal_embeddings = model.temporal_encoder(temporal_features)
+        memory_inputs = torch.cat([embeddings, temporal_embeddings], dim=-1)
+        for turn_index, (utterance_embedding, memory_input) in enumerate(zip(embeddings, memory_inputs)):
+            memory_state_norm_before = float(torch.linalg.vector_norm(state).detach().cpu().item())
+            z_i = memory.input_projection(memory_input)
+            memory_read = memory.readout(torch.cat([z_i, state], dim=-1))
+            state = memory.memory_cell(z_i.unsqueeze(0), state.unsqueeze(0)).squeeze(0)
+            memory_state_norm_after = float(torch.linalg.vector_norm(state).detach().cpu().item())
+            fused = utterance_embedding + torch.tanh(model.alpha) * memory_read
+            logits = model.classifier(fused.unsqueeze(0))
+            pred_id = int(torch.argmax(logits, dim=-1).item())
+            gold_id = int(labels[turn_index].detach().cpu().item())
+            row = dialogue.rows[turn_index]
+            trace_rows.append(
+                {
+                    "experiment": experiment_name,
+                    "split": split_name,
+                    "dialogue_id": dialogue.dialogue_id,
+                    "turn_index": turn_index,
+                    "utterance_id": row["utterance_id"],
+                    "start_time": float(row["start_time"]),
+                    "end_time": float(row["end_time"]),
+                    "memory_state_norm_before": memory_state_norm_before,
+                    "memory_state_norm_after": memory_state_norm_after,
+                    "gold_label": ID2LABEL[gold_id],
+                    "pred_label": ID2LABEL[pred_id],
+                }
+            )
+    return trace_rows
+
+
 def save_checkpoint(path: Path, model: WavLMTIMSerModel, config: Mapping[str, Any], epoch: int, metrics: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
@@ -290,6 +379,10 @@ def save_checkpoint(path: Path, model: WavLMTIMSerModel, config: Mapping[str, An
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train WavLM mean-embedding + TIM SER model.")
     parser.add_argument("--config", default="configs/wavlm_tim.yaml")
+    parser.add_argument("--debug_memory_trace", action="store_true", help="Save a dialogue-level memory trace for verification.")
+    parser.add_argument("--debug_memory_split", choices=["validation", "test"], default="test")
+    parser.add_argument("--debug_memory_dialogue_id", default=None)
+    parser.add_argument("--debug_memory_trace_path", default="results/memory_trace_debug.csv")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -443,6 +536,29 @@ def main() -> None:
         strong_overlap_threshold=float(config["analysis"].get("strong_overlap_threshold", 0.25)),
     )
     append_log(log_path, f"test_WA={test_metrics['WA']:.6f} test_UA={test_metrics['UA']:.6f}")
+    if args.debug_memory_trace:
+        debug_dialogue = select_debug_dialogue(
+            dialogue_splits,
+            split_name=args.debug_memory_split,
+            dialogue_id=args.debug_memory_dialogue_id,
+        )
+        trace_rows = trace_tim_dialogue_memory(
+            model,
+            debug_dialogue,
+            temporal_builder,
+            device,
+            experiment_name=str(config["experiment_name"]),
+            split_name=args.debug_memory_split,
+        )
+        save_memory_trace_csv(args.debug_memory_trace_path, trace_rows)
+        append_log(
+            log_path,
+            (
+                f"debug_memory_trace_saved={args.debug_memory_trace_path} "
+                f"split={args.debug_memory_split} dialogue_id={debug_dialogue.dialogue_id} "
+                f"num_rows={len(trace_rows)}"
+            ),
+        )
     if wandb_run is not None:
         wandb_run.summary["best_epoch"] = best_epoch
         wandb_run.summary["best_validation_UA"] = best_ua

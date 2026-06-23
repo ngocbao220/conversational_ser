@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IEMOCAP Emotion Stream Demo</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Speech Emotion Recognition</p>
+        <h1>Dialogue Stream</h1>
+      </div>
+      <div class="metric-strip" aria-label="Dataset summary">
+        <div>
+          <strong id="utteranceCount">0</strong>
+          <span>utterances</span>
+        </div>
+        <div>
+          <strong id="dialogueCount">0</strong>
+          <span>dialogues</span>
+        </div>
+        <div>
+          <strong id="sessionCount">0</strong>
+          <span>sessions</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <aside class="sidebar" aria-label="Filters">
+        <section class="filter-block">
+          <h2>Session</h2>
+          <div id="sessionFilters" class="chip-list"></div>
+        </section>
+
+        <section class="filter-block">
+          <h2>Dialogue</h2>
+          <select id="dialogueSelect" aria-label="Choose dialogue"></select>
+        </section>
+
+        <section class="filter-block">
+          <h2>View</h2>
+          <div id="viewControls" class="segmented vertical"></div>
+        </section>
+
+        <section class="filter-block">
+          <h2>Model</h2>
+          <div id="modelControls" class="segmented"></div>
+        </section>
+
+        <section class="filter-block">
+          <h2>Label</h2>
+          <div id="labelFilters" class="chip-list compact"></div>
+        </section>
+      </aside>
+
+      <section class="stream-panel" aria-label="Dialogue stream">
+        <div class="stream-toolbar">
+          <div>
+            <h2 id="activeDialogue">Dialogue</h2>
+            <p id="streamMeta"></p>
+          </div>
+          <label class="search-box">
+            <span>Search</span>
+            <input id="searchInput" type="search" placeholder="transcript, speaker, utterance..." />
+          </label>
+        </div>
+
+        <section class="dialogue-player" aria-label="Dialogue audio player">
+          <div class="player-main">
+            <button id="playDialogueButton" class="player-button primary" type="button">Play</button>
+            <button id="prevTurnButton" class="player-button" type="button">Prev</button>
+            <button id="nextTurnButton" class="player-button" type="button">Next</button>
+            <button id="stopDialogueButton" class="player-button" type="button">Stop</button>
+          </div>
+          <div class="player-status">
+            <div>
+              <strong id="playerTitle">Choose a dialogue</strong>
+              <span id="playerSubtitle">Select one dialogue to listen to the full conversation.</span>
+            </div>
+            <div class="player-progress" aria-hidden="true">
+              <span id="playerProgress"></span>
+            </div>
+          </div>
+        </section>
+
+        <div id="labelBars" class="label-bars" aria-label="Predicted label distribution"></div>
+        <div id="evidencePanel" class="evidence-panel" aria-label="TIM evidence summary"></div>
+        <div id="streamList" class="stream-list"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

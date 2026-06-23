@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import random
@@ -252,6 +253,93 @@ def run_dialogue_epoch(
     }
 
 
+def select_debug_dialogue(
+    dialogue_splits: Mapping[str, Sequence[DialogueEmbedding]],
+    split_name: str,
+    dialogue_id: Optional[str] = None,
+) -> DialogueEmbedding:
+    dialogues = list(dialogue_splits[split_name])
+    if not dialogues:
+        raise ValueError(f"No dialogues available for debug split={split_name!r}.")
+    if dialogue_id is None:
+        return dialogues[0]
+    for dialogue in dialogues:
+        if dialogue.dialogue_id == dialogue_id:
+            return dialogue
+    raise ValueError(f"dialogue_id={dialogue_id!r} not found in split={split_name!r}.")
+
+
+def save_memory_trace_csv(path: str | Path, rows: Sequence[Mapping[str, Any]]) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "experiment",
+        "split",
+        "dialogue_id",
+        "turn_index",
+        "utterance_id",
+        "start_time",
+        "end_time",
+        "memory_state_norm_before",
+        "memory_state_norm_after",
+        "gold_label",
+        "pred_label",
+    ]
+    append = path.exists() and path.stat().st_size > 0
+    with path.open("a" if append else "w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        if not append:
+            writer.writeheader()
+        for row in rows:
+            writer.writerow({key: row.get(key, "") for key in fieldnames})
+
+
+def trace_mal_dialogue_memory(
+    model: WavLM_MALSerModel,
+    dialogue: DialogueEmbedding,
+    device: torch.device,
+    temporal_feature_dim: int,
+    experiment_name: str,
+    split_name: str,
+) -> list[Dict[str, Any]]:
+    model.eval()
+    trace_rows: list[Dict[str, Any]] = []
+    embeddings = dialogue.embeddings.to(device)
+    labels = dialogue.labels.to(device)
+    temporal_features = make_temporal_features(embeddings.shape[0], temporal_feature_dim, device)
+    memory = model.memory
+    state = memory.initial_state(device=embeddings.device, dtype=embeddings.dtype)
+
+    with torch.no_grad():
+        for turn_index, (utterance_embedding, temporal_feature) in enumerate(zip(embeddings, temporal_features)):
+            memory_state_norm_before = float(torch.linalg.vector_norm(state).detach().cpu().item())
+            z_i = memory.input_projection(utterance_embedding) + memory.temporal_projection(temporal_feature)
+            memory_read = memory.readout(torch.cat([z_i, state], dim=-1))
+            state = memory.memory_cell(z_i.unsqueeze(0), state.unsqueeze(0)).squeeze(0)
+            memory_state_norm_after = float(torch.linalg.vector_norm(state).detach().cpu().item())
+            fused = utterance_embedding + torch.tanh(model.alpha) * memory_read
+            logits = model.classifier(fused.unsqueeze(0))
+            pred_id = int(torch.argmax(logits, dim=-1).item())
+            gold_id = int(labels[turn_index].detach().cpu().item())
+            row = dialogue.rows[turn_index]
+            trace_rows.append(
+                {
+                    "experiment": experiment_name,
+                    "split": split_name,
+                    "dialogue_id": dialogue.dialogue_id,
+                    "turn_index": turn_index,
+                    "utterance_id": row["utterance_id"],
+                    "start_time": float(row["start_time"]),
+                    "end_time": float(row["end_time"]),
+                    "memory_state_norm_before": memory_state_norm_before,
+                    "memory_state_norm_after": memory_state_norm_after,
+                    "gold_label": ID2LABEL[gold_id],
+                    "pred_label": ID2LABEL[pred_id],
+                }
+            )
+    return trace_rows
+
+
 def save_checkpoint(path: Path, model: WavLM_MALSerModel, config: Mapping[str, Any], epoch: int, metrics: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
@@ -270,6 +358,10 @@ def save_checkpoint(path: Path, model: WavLM_MALSerModel, config: Mapping[str, A
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train WavLM mean-embedding + MAL SER model without TIM.")
     parser.add_argument("--config", default="configs/wavlm_mal_no_tim.yaml")
+    parser.add_argument("--debug_memory_trace", action="store_true", help="Save a dialogue-level memory trace for verification.")
+    parser.add_argument("--debug_memory_split", choices=["validation", "test"], default="test")
+    parser.add_argument("--debug_memory_dialogue_id", default=None)
+    parser.add_argument("--debug_memory_trace_path", default="results/memory_trace_debug.csv")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -403,6 +495,29 @@ def main() -> None:
     save_confusion_matrix_csv(output_dir / "confusion_matrix.csv", test_metrics["confusion_matrix"], LABEL_NAMES)
     save_confusion_matrix_png(output_dir / "confusion_matrix.png", test_metrics["confusion_matrix"], LABEL_NAMES)
     append_log(log_path, f"test_WA={test_metrics['WA']:.6f} test_UA={test_metrics['UA']:.6f}")
+    if args.debug_memory_trace:
+        debug_dialogue = select_debug_dialogue(
+            dialogue_splits,
+            split_name=args.debug_memory_split,
+            dialogue_id=args.debug_memory_dialogue_id,
+        )
+        trace_rows = trace_mal_dialogue_memory(
+            model,
+            debug_dialogue,
+            device,
+            temporal_feature_dim=temporal_feature_dim,
+            experiment_name=str(config["experiment_name"]),
+            split_name=args.debug_memory_split,
+        )
+        save_memory_trace_csv(args.debug_memory_trace_path, trace_rows)
+        append_log(
+            log_path,
+            (
+                f"debug_memory_trace_saved={args.debug_memory_trace_path} "
+                f"split={args.debug_memory_split} dialogue_id={debug_dialogue.dialogue_id} "
+                f"num_rows={len(trace_rows)}"
+            ),
+        )
     if wandb_run is not None:
         wandb_run.summary["best_epoch"] = best_epoch
         wandb_run.summary["best_validation_UA"] = best_ua
