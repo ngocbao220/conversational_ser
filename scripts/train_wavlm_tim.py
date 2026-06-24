@@ -28,7 +28,12 @@ from utils.experiment_metrics import (
     save_json,
 )
 from utils.iemocap_kaggle import LABEL_MAPPING_VERSION, ID2LABEL, LABEL_NAMES, discover_iemocap_samples, split_loso_by_dialogue
-from utils.temporal_features import TEMPORAL_FEATURE_NAMES, TemporalInteractionFeatureBuilder, attach_temporal_features_to_dialogues
+from utils.temporal_features import (
+    TEMPORAL_FEATURE_NAMES,
+    TemporalInputPolicy,
+    TemporalInteractionFeatureBuilder,
+    attach_temporal_features_to_dialogues,
+)
 
 
 def load_config(path: str | Path) -> Dict[str, Any]:
@@ -202,6 +207,7 @@ def run_dialogue_epoch(
     model: WavLMTIMSerModel,
     dialogues: Sequence[DialogueEmbedding],
     temporal_builder: TemporalInteractionFeatureBuilder,
+    temporal_policy: TemporalInputPolicy,
     device: torch.device,
     optimizer: Optional[torch.optim.Optimizer] = None,
     scheduler: Optional[Any] = None,
@@ -224,7 +230,9 @@ def run_dialogue_epoch(
     for dialogue in iterator:
         embeddings = dialogue.embeddings.to(device)
         labels = dialogue.labels.to(device)
-        temporal_features = temporal_builder.transform_dialogue(dialogue).to(device)
+        temporal_features = temporal_policy.apply(
+            temporal_builder.transform_dialogue(dialogue), dialogue.dialogue_id
+        ).to(device)
         with torch.set_grad_enabled(is_train):
             output = model(
                 embeddings=embeddings,
@@ -319,6 +327,7 @@ def trace_tim_dialogue_memory(
     model: WavLMTIMSerModel,
     dialogue: DialogueEmbedding,
     temporal_builder: TemporalInteractionFeatureBuilder,
+    temporal_policy: TemporalInputPolicy,
     device: torch.device,
     experiment_name: str,
     split_name: str,
@@ -327,7 +336,9 @@ def trace_tim_dialogue_memory(
     trace_rows: list[Dict[str, Any]] = []
     embeddings = dialogue.embeddings.to(device)
     labels = dialogue.labels.to(device)
-    temporal_features = temporal_builder.transform_dialogue(dialogue).to(device)
+    temporal_features = temporal_policy.apply(
+        temporal_builder.transform_dialogue(dialogue), dialogue.dialogue_id
+    ).to(device)
     memory = model.memory
     state = memory.initial_state(device=embeddings.device, dtype=embeddings.dtype)
 
@@ -394,8 +405,8 @@ def main() -> None:
         summary_path = run_cross_session("scripts.train_wavlm_tim", args.config)
         print(f"cross_session_summary={summary_path}")
         return
-    if not bool(config["model"].get("use_temporal_features", False)) or str(config["model"].get("temporal_feature_mode")) != "real":
-        raise ValueError("Experiment 3 must use real temporal features: set use_temporal_features=true and temporal_feature_mode=real.")
+    if not bool(config["model"].get("use_temporal_features", False)):
+        raise ValueError("TIM ablations require use_temporal_features=true to preserve the TIM architecture.")
     if int(config["model"].get("temporal_feature_dim", 16)) != len(TEMPORAL_FEATURE_NAMES):
         raise ValueError(f"temporal_feature_dim must be {len(TEMPORAL_FEATURE_NAMES)} for TIM.")
     if not bool(config.get("precompute", {}).get("enabled", True)):
@@ -423,6 +434,7 @@ def main() -> None:
     temporal_builder.save_stats(output_dir / "temporal_feature_stats.json")
     for dialogues in dialogue_splits.values():
         attach_temporal_features_to_dialogues(dialogues, temporal_builder)
+    temporal_policy = TemporalInputPolicy.from_model_config(config["model"])
 
     embedding_dim = int(train_dialogues[0].embeddings.shape[-1])
     model = build_wavlm_tim_ser_model(config["model"], embedding_dim=embedding_dim).to(device)
@@ -438,6 +450,12 @@ def main() -> None:
     )
     append_log(log_path, f"embedding_dim={embedding_dim} pooling=mean frozen_wavlm=true")
     append_log(log_path, f"temporal_feature_mode={config['model']['temporal_feature_mode']} dim={config['model']['temporal_feature_dim']}")
+    append_log(
+        log_path,
+        "temporal_input_policy="
+        f"mode={temporal_policy.mode} disabled_groups={list(temporal_policy.disabled_feature_groups)} "
+        f"shuffle_seed={temporal_policy.shuffle_seed}",
+    )
     append_log(log_path, "temporal_stats_source=train_split_only binary_flags_not_normalized=true")
     append_log(log_path, "memory_order=read_before_write reset=dialogue_boundary")
     append_log(log_path, f"parameters total={counts['total']:,} trainable={counts['trainable']:,}")
@@ -467,6 +485,7 @@ def main() -> None:
             model,
             train_dialogues,
             temporal_builder,
+            temporal_policy,
             device,
             optimizer=optimizer,
             scheduler=scheduler,
@@ -479,6 +498,7 @@ def main() -> None:
             model,
             val_dialogues,
             temporal_builder,
+            temporal_policy,
             device,
             progress=progress,
             description=f"{config['experiment_name']} epoch {epoch}/{max_epochs} validation",
@@ -522,6 +542,7 @@ def main() -> None:
         model,
         test_dialogues,
         temporal_builder,
+        temporal_policy,
         device,
         progress=progress,
         description=f"{config['experiment_name']} test",
@@ -554,6 +575,7 @@ def main() -> None:
             model,
             debug_dialogue,
             temporal_builder,
+            temporal_policy,
             device,
             experiment_name=str(config["experiment_name"]),
             split_name=args.debug_memory_split,

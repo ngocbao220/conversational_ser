@@ -4,6 +4,7 @@ const state = {
   dialogue: "all",
   model: "tim",
   view: "full",
+  pairedOutcome: "all",
   labels: new Set(),
   search: "",
   player: {
@@ -35,6 +36,7 @@ const nodes = {
   sessionFilters: document.querySelector("#sessionFilters"),
   dialogueSelect: document.querySelector("#dialogueSelect"),
   viewControls: document.querySelector("#viewControls"),
+  pairControls: document.querySelector("#pairControls"),
   modelControls: document.querySelector("#modelControls"),
   labelFilters: document.querySelector("#labelFilters"),
   activeDialogue: document.querySelector("#activeDialogue"),
@@ -56,6 +58,14 @@ const views = [
   { id: "full", name: "Full dialogue", help: "All Session 5 turns, preserving context" },
   { id: "evaluated", name: "Evaluated only", help: "Only utterances with model predictions" },
   { id: "tim_fixes", name: "TIM fixes only", help: "TIM correct while baseline or MAL is wrong" },
+];
+
+const pairedOutcomes = [
+  { id: "all", name: "All paired outcomes", help: "Keep every turn in the current view" },
+  { id: "tim_only_correct", name: "TIM correct, MAL wrong", help: "TIM-only wins" },
+  { id: "mal_only_correct", name: "MAL correct, TIM wrong", help: "MAL-only wins" },
+  { id: "both_correct", name: "Both correct", help: "MAL and TIM match the gold label" },
+  { id: "both_wrong", name: "Both wrong", help: "Both models miss the gold label" },
 ];
 
 fetch(`demo_data.json?v=${Date.now()}`, { cache: "no-store" })
@@ -107,6 +117,7 @@ function renderControls() {
   renderSessionFilters();
   renderDialogueOptions();
   renderViewControls();
+  renderPairControls();
   renderModelControls();
   renderLabelFilters();
 }
@@ -157,6 +168,27 @@ function renderViewControls() {
     button.addEventListener("click", () => {
       state.view = button.dataset.view;
       renderViewControls();
+      render();
+    });
+  });
+}
+
+function renderPairControls() {
+  const counts = state.data.summary.mal_tim_paired_counts || {};
+  nodes.pairControls.innerHTML = pairedOutcomes
+    .map((outcome) => {
+      const active = state.pairedOutcome === outcome.id ? " active" : "";
+      const count = outcome.id === "all"
+        ? state.data.summary.fully_compared_count
+        : (counts[outcome.id] || 0);
+      return `<button class="segment${active}" data-paired-outcome="${outcome.id}"><span>${outcome.name} <em>${Number(count).toLocaleString()}</em></span><small>${outcome.help}</small></button>`;
+    })
+    .join("");
+
+  nodes.pairControls.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.pairedOutcome = button.dataset.pairedOutcome;
+      renderPairControls();
       render();
     });
   });
@@ -221,6 +253,7 @@ function filteredUtterances() {
     if (state.dialogue !== "all" && item.dialogue_id !== state.dialogue) return false;
     if (state.view === "evaluated" && !prediction) return false;
     if (state.view === "tim_fixes" && !isTimFix(item)) return false;
+    if (state.pairedOutcome !== "all" && item.comparison?.mal_tim_outcome !== state.pairedOutcome) return false;
     if (state.labels.size > 0 && (!prediction || !state.labels.has(prediction.label))) return false;
     if (!state.search) return true;
     const haystack = [
@@ -614,7 +647,9 @@ function renderModelComparison(item) {
     })
     .join("");
   const proof = isTimFix(item) ? `<span class="proof-pill">${proofText(item.comparison.outcome)}</span>` : "";
-  return `<div class="model-comparison">${rows}${proof}</div>`;
+  const paired = pairedOutcomeText(item.comparison?.mal_tim_outcome);
+  const pairedPill = paired ? `<span class="pair-pill ${item.comparison.mal_tim_outcome}">${paired}</span>` : "";
+  return `<div class="model-comparison">${rows}${proof}${pairedPill}</div>`;
 }
 
 function proofText(outcome) {
@@ -622,6 +657,16 @@ function proofText(outcome) {
     tim_correct_baseline_mal_wrong: "TIM fixes both",
     tim_correct_baseline_wrong: "TIM fixes baseline",
     tim_correct_mal_wrong: "TIM fixes MAL",
+  };
+  return labels[outcome] || "";
+}
+
+function pairedOutcomeText(outcome) {
+  const labels = {
+    tim_only_correct: "TIM correct, MAL wrong",
+    mal_only_correct: "MAL correct, TIM wrong",
+    both_correct: "MAL and TIM correct",
+    both_wrong: "MAL and TIM wrong",
   };
   return labels[outcome] || "";
 }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -39,9 +40,69 @@ BINARY_TEMPORAL_FEATURES = {
     "long_pause",
 }
 
+TEMPORAL_FEATURE_GROUPS = {
+    "duration": ("duration", "speaker_prev_mean_duration"),
+    "gap": ("gap_prev", "prev_gap_abs", "short_response", "long_pause", "speaker_prev_mean_gap"),
+    "overlap": ("overlap_prev", "overlap_ratio", "is_overlap", "is_interrupting_prev", "speaker_prev_overlap_rate"),
+    "speaker_switch": ("speaker_switch", "same_speaker"),
+    "turn_position": ("turn_index_norm", "speaker_prev_turn_count_norm"),
+}
+
 CONTINUOUS_TEMPORAL_FEATURES = [
     name for name in TEMPORAL_FEATURE_NAMES if name not in BINARY_TEMPORAL_FEATURES
 ]
+
+
+@dataclass(frozen=True)
+class TemporalInputPolicy:
+    """Applies a reproducible temporal ablation without changing TIM parameters."""
+
+    mode: str = "real"
+    disabled_feature_groups: tuple[str, ...] = ()
+    shuffle_seed: int = 0
+
+    def __post_init__(self) -> None:
+        if self.mode not in {"real", "zero", "shuffled"}:
+            raise ValueError("temporal_input_mode must be one of: real, zero, shuffled.")
+        unknown_groups = set(self.disabled_feature_groups) - set(TEMPORAL_FEATURE_GROUPS)
+        if unknown_groups:
+            raise ValueError(f"Unknown temporal feature groups: {sorted(unknown_groups)}.")
+
+    @classmethod
+    def from_model_config(cls, model_cfg: Mapping[str, Any]) -> "TemporalInputPolicy":
+        raw_groups = model_cfg.get("disabled_temporal_feature_groups", [])
+        if isinstance(raw_groups, str):
+            raw_groups = [raw_groups]
+        if not isinstance(raw_groups, Sequence):
+            raise ValueError("disabled_temporal_feature_groups must be a list of feature-group names.")
+        return cls(
+            mode=str(model_cfg.get("temporal_input_mode", "real")),
+            disabled_feature_groups=tuple(str(group) for group in raw_groups),
+            shuffle_seed=int(model_cfg.get("temporal_shuffle_seed", 0)),
+        )
+
+    def apply(self, features: torch.Tensor, dialogue_id: str) -> torch.Tensor:
+        if features.ndim != 2 or features.shape[1] != len(TEMPORAL_FEATURE_NAMES):
+            raise ValueError(
+                "Expected temporal feature tensor with shape "
+                f"[num_utterances, {len(TEMPORAL_FEATURE_NAMES)}], got {tuple(features.shape)}."
+            )
+        transformed = features.clone()
+        if self.mode == "zero":
+            return torch.zeros_like(transformed)
+
+        for group in self.disabled_feature_groups:
+            indices = [TEMPORAL_FEATURE_NAMES.index(name) for name in TEMPORAL_FEATURE_GROUPS[group]]
+            transformed[:, indices] = 0.0
+
+        if self.mode == "shuffled" and len(transformed) > 1:
+            digest = hashlib.blake2b(
+                f"{self.shuffle_seed}:{dialogue_id}".encode("utf-8"), digest_size=8
+            ).digest()
+            generator = torch.Generator(device="cpu")
+            generator.manual_seed(int.from_bytes(digest, byteorder="big", signed=False))
+            transformed = transformed[torch.randperm(len(transformed), generator=generator)]
+        return transformed
 
 
 @dataclass(frozen=True)

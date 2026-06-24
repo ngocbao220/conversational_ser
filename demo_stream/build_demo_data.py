@@ -124,6 +124,7 @@ def compare_predictions(model_predictions: dict[str, dict[str, object]], gold_la
     mal_correct = bool(mal and mal.get("label") == gold_label)
     tim_correct = bool(tim and tim.get("label") == gold_label)
     has_all_predictions = bool(baseline and mal and tim)
+    has_mal_tim_predictions = bool(mal and tim)
 
     if not has_all_predictions:
         outcome = "missing_prediction"
@@ -142,12 +143,25 @@ def compare_predictions(model_predictions: dict[str, dict[str, object]], gold_la
     else:
         outcome = "all_wrong"
 
+    if not has_mal_tim_predictions:
+        mal_tim_outcome = "missing_prediction"
+    elif tim_correct and not mal_correct:
+        mal_tim_outcome = "tim_only_correct"
+    elif mal_correct and not tim_correct:
+        mal_tim_outcome = "mal_only_correct"
+    elif tim_correct:
+        mal_tim_outcome = "both_correct"
+    else:
+        mal_tim_outcome = "both_wrong"
+
     return {
         "has_all_predictions": has_all_predictions,
+        "has_mal_tim_predictions": has_mal_tim_predictions,
         "baseline_correct": baseline_correct,
         "mal_correct": mal_correct,
         "tim_correct": tim_correct,
         "outcome": outcome,
+        "mal_tim_outcome": mal_tim_outcome,
     }
 
 
@@ -170,6 +184,7 @@ def main() -> None:
     dialogue_prediction_counts: Counter[str] = Counter()
     label_counts: Counter[str] = Counter()
     evidence_counts: Counter[str] = Counter()
+    mal_tim_counts: Counter[str] = Counter()
 
     for meta in metadata_rows:
         utterance_id = meta["utterance_id"]
@@ -196,6 +211,7 @@ def main() -> None:
 
         comparison = compare_predictions(model_predictions, gold_label)
         evidence_counts[str(comparison["outcome"])] += 1
+        mal_tim_counts[str(comparison["mal_tim_outcome"])] += 1
 
         item = {
             "utterance_id": utterance_id,
@@ -263,6 +279,7 @@ def main() -> None:
             "session_count": len(session_counts),
             "tim_label_counts": dict(sorted(label_counts.items())),
             "evidence_counts": dict(sorted(evidence_counts.items())),
+            "mal_tim_paired_counts": dict(sorted(mal_tim_counts.items())),
         },
         "sessions": sessions,
         "dialogues_by_session": dialogues_by_session,
