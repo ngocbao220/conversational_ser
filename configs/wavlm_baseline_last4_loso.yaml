@@ -1,11 +1,11 @@
-experiment_name: wavlm_baseline_no_mal_no_tim
-output_dir: results/wavlm_baseline_no_mal_no_tim
+experiment_name: wavlm_baseline_last4_loso
+output_dir: results/end2end_last4/wavlm_baseline_last4_loso
 seed: 42
 
 dataset:
   name: iemocap
   iemocap_root: iemocap
-  auto_download: true
+  auto_download: false
   kaggle_dataset: sangayb/iemocap
   meld_root: data/meld-dataset
   meld_auto_download: true
@@ -20,18 +20,18 @@ model:
   num_labels: 4
   pooling: mean
   freeze_wavlm: true
-  unfreeze_last_n_layers: 0
+  unfreeze_last_n_layers: 4
   dropout: 0.2
 
 precompute:
-  enabled: true
+  enabled: false
   pooling: mean
   cache_path: results/wavlm_shared/cache/wavlm_mean_embeddings.pt
   force_recompute: false
   batch_size: 16
 
 cross_session:
-  enabled: false
+  enabled: true
   test_sessions: [1, 2, 3, 4, 5]
   run_name: null
 
@@ -39,22 +39,22 @@ training:
   device: auto
   batch_size: 16
   eval_batch_size: 16
-  wavlm_batch_size: 4
-  eval_wavlm_batch_size: 4
-  max_epochs: 100
-  learning_rate: 0.0001
-  learning_rate_classifier: 0.0001
+  wavlm_batch_size: 2
+  eval_wavlm_batch_size: 2
+  max_epochs: 30
+  learning_rate: 0.00002
+  learning_rate_classifier: 0.00002
   weight_decay: 0.01
   scheduler: cosine
   warmup_ratio: 0.1
   gradient_clip: 1.0
   use_class_weights: false
   num_workers: 0
-  progress_bar: true
+  progress_bar: false
 
 wandb:
   use_wandb: true
   project: conversational-SER
-  run_name: wavlm_baseline_no_mal_no_tim
+  run_name: wavlm_baseline_last4_loso
   entity: null
   mode: online

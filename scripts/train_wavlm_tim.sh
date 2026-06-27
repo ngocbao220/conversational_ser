@@ -15,6 +15,6 @@ if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
   fi
 fi
 
-CONFIG_PATH="${CONFIG_PATH:-configs/wavlm_tim.yaml}"
+CONFIG_PATH="${1:-${CONFIG_PATH:-configs/wavlm_tim.yaml}}"
 
 "$PYTHON_BIN" -m scripts.train_wavlm_tim --config "$CONFIG_PATH"

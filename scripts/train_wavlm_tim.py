@@ -29,7 +29,15 @@ from utils.experiment_metrics import (
     save_confusion_matrix_png,
     save_json,
 )
-from utils.iemocap_kaggle import LABEL_MAPPING_VERSION, ID2LABEL, LABEL_NAMES, discover_iemocap_samples, split_loso_by_dialogue
+from utils.iemocap_kaggle import (
+    LABEL_MAPPING_VERSION,
+    ID2LABEL,
+    LABEL_NAMES,
+    add_dataset_override_args,
+    apply_dataset_overrides,
+    discover_ser_samples,
+    split_samples_for_config,
+)
 from utils.temporal_features import (
     TEMPORAL_FEATURE_NAMES,
     TemporalInputPolicy,
@@ -141,17 +149,8 @@ def cache_is_compatible(cache: Mapping[str, Any], config: Mapping[str, Any], exp
 def prepare_dialogues(config: Mapping[str, Any], device: torch.device, log_path: Path):
     dataset_cfg = config["dataset"]
     embedding_cfg = config["precompute"]
-    samples = discover_iemocap_samples(
-        dataset_cfg["iemocap_root"],
-        auto_download=bool(dataset_cfg.get("auto_download", False)),
-        kaggle_dataset=str(dataset_cfg.get("kaggle_dataset", "sangayb/iemocap")),
-    )
-    splits = split_loso_by_dialogue(
-        samples,
-        test_session=int(dataset_cfg.get("test_session", 5)),
-        validation_ratio=float(dataset_cfg.get("validation_ratio", 0.1)),
-        seed=int(config.get("seed", 42)),
-    )
+    samples = discover_ser_samples(dataset_cfg)
+    splits = split_samples_for_config(samples, dataset_cfg, seed=int(config.get("seed", 42)))
     if not bool(embedding_cfg.get("enabled", True)):
         from transformers import AutoConfig
 
@@ -429,6 +428,7 @@ def save_checkpoint(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train WavLM mean-embedding + TIM SER model.")
     parser.add_argument("--config", default="configs/wavlm_tim.yaml")
+    add_dataset_override_args(parser)
     parser.add_argument("--debug_memory_trace", action="store_true", help="Save a dialogue-level memory trace for verification.")
     parser.add_argument("--debug_memory_split", choices=["validation", "test"], default="test")
     parser.add_argument("--debug_memory_dialogue_id", default=None)
@@ -436,6 +436,7 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_config(args.config)
+    apply_dataset_overrides(config, args)
     if bool(config.get("cross_session", {}).get("enabled", False)):
         from scripts.run_cross_session import run_cross_session
 

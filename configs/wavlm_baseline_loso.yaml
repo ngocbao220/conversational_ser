@@ -3,9 +3,13 @@ output_dir: results/wavlm_baseline_loso
 seed: 42
 
 dataset:
+  name: iemocap
   iemocap_root: iemocap
   auto_download: true
   kaggle_dataset: sangayb/iemocap
+  meld_root: data/meld-dataset
+  meld_auto_download: true
+  meld_kaggle_dataset: zaber666/meld-dataset
   test_session: 5
   validation_ratio: 0.1
   sampling_rate: 16000
@@ -38,11 +42,13 @@ training:
   wavlm_batch_size: 4
   eval_wavlm_batch_size: 4
   max_epochs: 100
+  learning_rate: 0.0001
   learning_rate_classifier: 0.0001
   weight_decay: 0.01
   scheduler: cosine
   warmup_ratio: 0.1
   gradient_clip: 1.0
+  use_class_weights: false
   num_workers: 0
   progress_bar: true
 

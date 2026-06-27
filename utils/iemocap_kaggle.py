@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import random
 import re
 import shutil
@@ -34,6 +35,19 @@ RAW_LABEL_MAP = {
     "fea": "sad",
 }
 UNLABELED_RAW_LABELS = {"xxx", "oth"}
+MELD_RAW_LABEL_MAP = {
+    "anger": "angry",
+    "angry": "angry",
+    "disgust": "angry",
+    "disgusted": "angry",
+    "joy": "happy",
+    "happy": "happy",
+    "surprise": "happy",
+    "sadness": "sad",
+    "sad": "sad",
+    "fear": "sad",
+    "neutral": "neutral",
+}
 
 EVAL_RE = re.compile(
     r"^\[(?P<start>\d+(?:\.\d+)?)\s*-\s*(?P<end>\d+(?:\.\d+)?)\]\s+"
@@ -58,6 +72,7 @@ class ConversationSERSample:
     end_time: float
     transcript: str = ""
     raw_label: str = ""
+    split_name: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -224,6 +239,227 @@ def discover_iemocap_samples(
     return samples
 
 
+def parse_meld_time(value: Any) -> float:
+    text = str(value).strip().replace(",", ".")
+    if not text:
+        return 0.0
+    parts = text.split(":")
+    try:
+        if len(parts) == 3:
+            hours, minutes, seconds = parts
+            return float(hours) * 3600.0 + float(minutes) * 60.0 + float(seconds)
+        if len(parts) == 2:
+            minutes, seconds = parts
+            return float(minutes) * 60.0 + float(seconds)
+        return float(text)
+    except ValueError:
+        return 0.0
+
+
+def find_meld_csvs(root: Path) -> List[Path]:
+    csvs = sorted(root.rglob("*sent_emo.csv"))
+    if csvs:
+        return csvs
+    return sorted(root.rglob("*sent_emo*.csv"))
+
+
+def ensure_meld_root(
+    meld_root: str | Path,
+    auto_download: bool = False,
+    kaggle_dataset: str = "zaber666/meld-dataset",
+) -> Path:
+    root = Path(meld_root)
+    if root.exists() and find_meld_csvs(root):
+        return root
+    if root.exists() and not auto_download:
+        raise FileNotFoundError(f"MELD root exists but no *sent_emo.csv files were found: {root}")
+    if not auto_download:
+        raise FileNotFoundError(f"MELD root not found: {root}. Set dataset.meld_auto_download=true.")
+
+    kaggle_bin = shutil.which("kaggle")
+    if kaggle_bin is None:
+        raise RuntimeError(
+            "Kaggle CLI not found. Install/configure kaggle or provide dataset.meld_root with MELD files."
+        )
+
+    root.parent.mkdir(parents=True, exist_ok=True)
+    download_dir = root.parent / f".{root.name}_kaggle_download"
+    if download_dir.exists():
+        shutil.rmtree(download_dir)
+    download_dir.mkdir(parents=True, exist_ok=True)
+    subprocess.run([kaggle_bin, "datasets", "download", "-d", kaggle_dataset, "-p", str(download_dir)], check=True)
+    zips = sorted(download_dir.glob("*.zip"))
+    if not zips:
+        raise RuntimeError(f"Kaggle download completed but no zip file was found in {download_dir}.")
+    root.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zips[0], "r") as archive:
+        archive.extractall(root)
+    shutil.rmtree(download_dir, ignore_errors=True)
+    if not find_meld_csvs(root):
+        raise RuntimeError(f"Downloaded {kaggle_dataset} but no MELD *sent_emo.csv files were found under {root}.")
+    return root
+
+
+def meld_split_from_path(path: Path) -> str:
+    text = str(path).lower()
+    if "train" in text:
+        return "train"
+    if "dev" in text or "valid" in text:
+        return "validation"
+    if "test" in text:
+        return "test"
+    return path.stem.split("_")[0]
+
+
+def build_meld_audio_index(root: Path) -> Dict[str, List[Path]]:
+    index: Dict[str, List[Path]] = {}
+    for path in root.rglob("*.mp4"):
+        index.setdefault(path.stem, []).append(path)
+    for path in root.rglob("*.wav"):
+        index.setdefault(path.stem, []).append(path)
+    return index
+
+
+def choose_meld_audio_path(audio_index: Mapping[str, List[Path]], basename: str, split_name: str) -> Optional[Path]:
+    candidates = list(audio_index.get(basename, []))
+    if not candidates:
+        return None
+    split_hint = "dev" if split_name == "validation" else split_name
+    matching = [path for path in candidates if f"/{split_hint}/" in str(path).lower()]
+    return (matching or candidates)[0]
+
+
+def discover_meld_samples(
+    meld_root: str | Path = "data/meld-dataset",
+    auto_download: bool = False,
+    kaggle_dataset: str = "zaber666/meld-dataset",
+) -> List[ConversationSERSample]:
+    import pandas as pd
+
+    root = ensure_meld_root(meld_root, auto_download=auto_download, kaggle_dataset=kaggle_dataset)
+    audio_index = build_meld_audio_index(root)
+    samples: List[ConversationSERSample] = []
+    missing_audio = 0
+    for csv_path in find_meld_csvs(root):
+        split_name = meld_split_from_path(csv_path)
+        frame = pd.read_csv(csv_path)
+        columns = {column.lower(): column for column in frame.columns}
+        required = ["dialogue_id", "utterance_id", "emotion", "speaker", "starttime", "endtime"]
+        if any(column not in columns for column in required):
+            continue
+        for _, row in frame.iterrows():
+            raw_label = str(row[columns["emotion"]]).strip().lower()
+            label_name = MELD_RAW_LABEL_MAP.get(raw_label)
+            if label_name is None:
+                continue
+            dialogue_num = int(row[columns["dialogue_id"]])
+            utterance_num = int(row[columns["utterance_id"]])
+            basename = f"dia{dialogue_num}_utt{utterance_num}"
+            audio_path = choose_meld_audio_path(audio_index, basename, split_name)
+            if audio_path is None:
+                missing_audio += 1
+                continue
+            dialogue_id = f"meld_{split_name}_dia{dialogue_num}"
+            utterance_id = f"meld_{split_name}_{basename}"
+            samples.append(
+                ConversationSERSample(
+                    audio_path=str(audio_path),
+                    label=LABEL2ID[label_name],
+                    label_name=label_name,
+                    session_id=0,
+                    dialogue_id=dialogue_id,
+                    utterance_id=utterance_id,
+                    speaker_id=str(row[columns["speaker"]]),
+                    start_time=parse_meld_time(row[columns["starttime"]]),
+                    end_time=parse_meld_time(row[columns["endtime"]]),
+                    transcript=str(row.get(columns.get("utterance", ""), "")),
+                    raw_label=raw_label,
+                    split_name=split_name,
+                )
+            )
+    if not samples:
+        raise RuntimeError(
+            f"No usable MELD samples found under {root}. "
+            f"missing_audio={missing_audio}; expected files like dia0_utt0.mp4."
+        )
+    return samples
+
+
+def discover_ser_samples(dataset_cfg: Mapping[str, Any]) -> List[ConversationSERSample]:
+    dataset_name = str(dataset_cfg.get("name", dataset_cfg.get("dataset_name", "iemocap"))).lower()
+    if dataset_name == "meld":
+        return discover_meld_samples(
+            dataset_cfg.get("meld_root", dataset_cfg.get("iemocap_root", "data/meld-dataset")),
+            auto_download=bool(dataset_cfg.get("meld_auto_download", dataset_cfg.get("auto_download", False))),
+            kaggle_dataset=str(dataset_cfg.get("meld_kaggle_dataset", "zaber666/meld-dataset")),
+        )
+    if dataset_name != "iemocap":
+        raise ValueError("dataset.name must be one of: iemocap, meld.")
+    return discover_iemocap_samples(
+        dataset_cfg["iemocap_root"],
+        auto_download=bool(dataset_cfg.get("auto_download", False)),
+        kaggle_dataset=str(dataset_cfg.get("kaggle_dataset", "sangayb/iemocap")),
+    )
+
+
+def add_dataset_override_args(parser: Any) -> None:
+    parser.add_argument("--dataset-name", choices=["iemocap", "meld"], default=None)
+    parser.add_argument("--iemocap-root", default=None)
+    parser.add_argument("--meld-root", default=None)
+    parser.add_argument("--meld-auto-download", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument("--meld-kaggle-dataset", default=None)
+
+
+def apply_dataset_overrides(config: Dict[str, Any], args: Any) -> None:
+    dataset_cfg = config.setdefault("dataset", {})
+    if getattr(args, "dataset_name", None) is not None:
+        dataset_cfg["name"] = args.dataset_name
+    if getattr(args, "iemocap_root", None) is not None:
+        dataset_cfg["iemocap_root"] = args.iemocap_root
+    if getattr(args, "meld_root", None) is not None:
+        dataset_cfg["meld_root"] = args.meld_root
+    if getattr(args, "meld_auto_download", None) is not None:
+        dataset_cfg["meld_auto_download"] = bool(args.meld_auto_download)
+    if getattr(args, "meld_kaggle_dataset", None) is not None:
+        dataset_cfg["meld_kaggle_dataset"] = args.meld_kaggle_dataset
+
+
+def split_samples_for_config(
+    samples: Sequence[ConversationSERSample],
+    dataset_cfg: Mapping[str, Any],
+    seed: int,
+) -> Dict[str, List[ConversationSERSample]]:
+    dataset_name = str(dataset_cfg.get("name", dataset_cfg.get("dataset_name", "iemocap"))).lower()
+    if dataset_name == "meld":
+        splits = {
+            "train": [sample for sample in samples if sample.split_name == "train"],
+            "validation": [sample for sample in samples if sample.split_name == "validation"],
+            "test": [sample for sample in samples if sample.split_name == "test"],
+        }
+        if not splits["train"] or not splits["test"]:
+            raise ValueError(
+                f"MELD train/test split is empty: train={len(splits['train'])}, test={len(splits['test'])}."
+            )
+        if not splits["validation"]:
+            train_dialogues = sorted({sample.dialogue_id for sample in splits["train"]})
+            rng = random.Random(seed)
+            rng.shuffle(train_dialogues)
+            validation_ratio = float(dataset_cfg.get("validation_ratio", 0.1))
+            validation_count = max(1, int(round(len(train_dialogues) * validation_ratio)))
+            validation_dialogues = set(train_dialogues[:validation_count])
+            validation = [sample for sample in splits["train"] if sample.dialogue_id in validation_dialogues]
+            train = [sample for sample in splits["train"] if sample.dialogue_id not in validation_dialogues]
+            splits["train"] = train
+            splits["validation"] = validation
+        return splits
+    return split_loso_by_dialogue(
+        samples,
+        test_session=int(dataset_cfg.get("test_session", 5)),
+        validation_ratio=float(dataset_cfg.get("validation_ratio", 0.1)),
+        seed=seed,
+    )
+
+
 def split_loso_by_dialogue(
     samples: Sequence[ConversationSERSample],
     test_session: int,
@@ -251,9 +487,20 @@ def split_loso_by_dialogue(
 
 
 def load_audio_mono(path: str | Path, target_sampling_rate: int) -> np.ndarray:
-    import soundfile as sf
+    try:
+        import soundfile as sf
 
-    waveform, sampling_rate = sf.read(str(path), dtype="float32", always_2d=False)
+        waveform, sampling_rate = sf.read(str(path), dtype="float32", always_2d=False)
+    except Exception:
+        try:
+            import librosa
+
+            waveform, sampling_rate = librosa.load(str(path), sr=target_sampling_rate, mono=True)
+            return np.asarray(waveform, dtype=np.float32)
+        except ImportError as exc:
+            raise RuntimeError(
+                f"Could not read audio file {path}. Install librosa/ffmpeg support for MELD mp4 files."
+            ) from exc
     waveform = np.asarray(waveform, dtype=np.float32)
     if waveform.ndim > 1:
         waveform = np.mean(waveform, axis=1)

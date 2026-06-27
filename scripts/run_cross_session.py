@@ -94,6 +94,12 @@ def run_cross_session(trainer_module: str, config_path: str | Path) -> Path:
         raise ValueError(f"Unsupported trainer module: {trainer_module}")
 
     base_config = load_config(config_path)
+    dataset_name = str(base_config.get("dataset", {}).get("name", "iemocap")).lower()
+    if dataset_name != "iemocap":
+        raise ValueError(
+            f"cross_session LOSO is only supported for IEMOCAP, got dataset.name={dataset_name!r}. "
+            "For MELD, use the official train/dev/test split with cross_session.enabled=false."
+        )
     cross_cfg = base_config.get("cross_session", {})
     if not bool(cross_cfg.get("enabled", False)):
         raise ValueError("Set cross_session.enabled=true before launching a cross-session run.")
