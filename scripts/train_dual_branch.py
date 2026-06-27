@@ -454,7 +454,7 @@ def train_model_with_phase_plan(
     log_path: Path,
     wandb_run: Any,
     class_weights: Optional[torch.Tensor],
-) -> tuple[int, float, Dict[str, Any]]:
+) -> tuple[int, float, Dict[str, Any], list[Dict[str, Any]]]:
     training_stage = config.get("training_stage", {"mode": "end_to_end"})
     max_epochs = int(config["training"].get("max_epochs", 10))
     phase_plan = [phase for phase in staged_phase_plan(training_stage, max_epochs) if phase["enabled"] and int(phase["epochs"]) > 0]
@@ -464,6 +464,7 @@ def train_model_with_phase_plan(
     best_ua = -1.0
     best_epoch = 0
     best_validation_metrics: Dict[str, Any] = {}
+    phase_summaries: list[Dict[str, Any]] = []
     global_epoch = 0
     progress = bool(config["training"].get("progress_bar", True))
     max_grad_norm = float(config["training"].get("gradient_clip", 1.0))
@@ -479,6 +480,10 @@ def train_model_with_phase_plan(
             max_epochs=phase_epochs,
         )
         counts = parameter_counts(model)
+        phase_best_ua = -1.0
+        phase_best_epoch = 0
+        phase_best_metrics: Dict[str, Any] = {}
+        phase_best_path = output_dir / f"{phase_name}_best.pth"
         append_log(
             log_path,
             (
@@ -548,12 +553,107 @@ def train_model_with_phase_plan(
                 )
 
             save_checkpoint(output_dir / "last.pth", model, config, global_epoch, val_metrics)
+            save_checkpoint(output_dir / f"{phase_name}_last.pth", model, config, global_epoch, val_metrics)
             if float(val_metrics["UA"]) > best_ua:
                 best_ua = float(val_metrics["UA"])
                 best_epoch = global_epoch
                 best_validation_metrics = val_metrics
                 save_checkpoint(output_dir / "best.pth", model, config, global_epoch, val_metrics)
-    return best_epoch, best_ua, best_validation_metrics
+            if float(val_metrics["UA"]) > phase_best_ua:
+                phase_best_ua = float(val_metrics["UA"])
+                phase_best_epoch = global_epoch
+                phase_best_metrics = val_metrics
+                save_checkpoint(phase_best_path, model, config, global_epoch, val_metrics)
+        phase_summary = {
+            "phase": phase_name,
+            "epochs": phase_epochs,
+            "best_epoch": phase_best_epoch,
+            "best_validation_UA": phase_best_ua,
+            "best_checkpoint": str(phase_best_path),
+            "best_validation": phase_best_metrics,
+        }
+        phase_summaries.append(phase_summary)
+        append_log(
+            log_path,
+            f"phase_end={phase_name} best_epoch={phase_best_epoch} best_val_UA={phase_best_ua:.6f} checkpoint={phase_best_path}",
+        )
+    save_json(output_dir / "phase_training_summary.json", {"phases": phase_summaries})
+    return best_epoch, best_ua, best_validation_metrics, phase_summaries
+
+
+def evaluate_checkpoint_on_test(
+    checkpoint_path: Path,
+    model: WavLMDualBranchTIMSerModel,
+    test_dialogues: Sequence[DialogueEmbedding],
+    temporal_builder: TemporalInteractionFeatureBuilder,
+    temporal_policy: TemporalInputPolicy,
+    device: torch.device,
+    config: Mapping[str, Any],
+    output_dir: Path,
+    phase_name: str,
+    progress: bool,
+) -> Dict[str, Any]:
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    test_output = run_dual_branch_dialogue_epoch(
+        model,
+        test_dialogues,
+        temporal_builder,
+        temporal_policy,
+        device,
+        progress=progress,
+        description=f"{config['experiment_name']} {phase_name} test",
+    )
+    test_metrics = compute_ser_metrics(
+        test_output["targets"],
+        test_output["predictions"],
+        LABEL_NAMES,
+        test_output["loss"],
+        int(checkpoint.get("epoch", 0)),
+    )
+    phase_dir = output_dir / "phase_tests" / phase_name
+    phase_dir.mkdir(parents=True, exist_ok=True)
+    metrics_payload = {
+        **test_metrics,
+        "phase": phase_name,
+        "checkpoint": str(checkpoint_path),
+        "checkpoint_epoch": int(checkpoint.get("epoch", 0)),
+        "validation_at_checkpoint": checkpoint.get("metrics", {}),
+    }
+    save_json(phase_dir / "metrics.json", metrics_payload)
+    save_dual_branch_predictions_csv(phase_dir / "predictions.csv", test_output["prediction_rows"])
+    save_confusion_matrix_csv(phase_dir / "confusion_matrix.csv", test_metrics["confusion_matrix"], LABEL_NAMES)
+    save_confusion_matrix_png(phase_dir / "confusion_matrix.png", test_metrics["confusion_matrix"], LABEL_NAMES)
+    save_branch_gate_stats(
+        phase_dir / "branch_gate_stats.json",
+        model,
+        test_output["residual_rows"],
+        strong_overlap_threshold=float(config["analysis"].get("strong_overlap_threshold", 0.25)),
+    )
+    return metrics_payload
+
+
+def save_phase_test_summary(output_dir: Path, phase_metrics: Sequence[Mapping[str, Any]]) -> None:
+    rows = []
+    for payload in phase_metrics:
+        rows.append(
+            {
+                "phase": payload["phase"],
+                "checkpoint_epoch": payload["checkpoint_epoch"],
+                "validation_UA": float(payload.get("validation_at_checkpoint", {}).get("UA", 0.0)),
+                "test_WA": float(payload["WA"]),
+                "test_UA": float(payload["UA"]),
+                "test_WF1": float(payload["WF1"]),
+                "test_Macro-F1": float(payload["Macro-F1"]),
+                "checkpoint": payload["checkpoint"],
+            }
+        )
+    csv_path = output_dir / "phase_test_metrics.csv"
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()) if rows else ["phase"])
+        writer.writeheader()
+        writer.writerows(rows)
+    save_json(output_dir / "phase_test_metrics.json", {"phases": rows})
 
 
 def main() -> None:
@@ -627,7 +727,7 @@ def main() -> None:
         if bool(config["training"].get("use_class_weights", False))
         else None
     )
-    best_epoch, best_ua, best_validation_metrics = train_model_with_phase_plan(
+    best_epoch, best_ua, best_validation_metrics, phase_summaries = train_model_with_phase_plan(
         model=model,
         train_dialogues=train_dialogues,
         val_dialogues=val_dialogues,
@@ -642,6 +742,37 @@ def main() -> None:
     )
 
     progress = bool(config["training"].get("progress_bar", True))
+    phase_test_metrics = []
+    for phase_summary in phase_summaries:
+        checkpoint_path = Path(str(phase_summary["best_checkpoint"]))
+        if not checkpoint_path.exists():
+            append_log(log_path, f"phase_test_skip={phase_summary['phase']} missing_checkpoint={checkpoint_path}")
+            continue
+        metrics = evaluate_checkpoint_on_test(
+            checkpoint_path=checkpoint_path,
+            model=model,
+            test_dialogues=test_dialogues,
+            temporal_builder=temporal_builder,
+            temporal_policy=temporal_policy,
+            device=device,
+            config=config,
+            output_dir=output_dir,
+            phase_name=str(phase_summary["phase"]),
+            progress=progress,
+        )
+        phase_test_metrics.append(metrics)
+        append_log(
+            log_path,
+            (
+                f"phase_test={phase_summary['phase']} "
+                f"checkpoint_epoch={metrics['checkpoint_epoch']} "
+                f"test_WA={metrics['WA']:.6f} test_UA={metrics['UA']:.6f} "
+                f"test_Macro-F1={metrics['Macro-F1']:.6f}"
+            ),
+        )
+    if phase_test_metrics:
+        save_phase_test_summary(output_dir, phase_test_metrics)
+
     checkpoint = torch.load(output_dir / "best.pth", map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
     test_output = run_dual_branch_dialogue_epoch(
