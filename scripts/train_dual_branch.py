@@ -64,6 +64,84 @@ def configure_trainable_gates(model: WavLMDualBranchTIMSerModel, model_cfg: Mapp
         model.beta.requires_grad_(False)
 
 
+def set_requires_grad(module: torch.nn.Module, value: bool) -> None:
+    for parameter in module.parameters():
+        parameter.requires_grad_(value)
+
+
+def configure_phase_trainability(
+    model: WavLMDualBranchTIMSerModel,
+    phase_name: str,
+    model_cfg: Mapping[str, Any],
+) -> None:
+    set_requires_grad(model, False)
+    phase = str(phase_name)
+    if phase == "end_to_end":
+        set_requires_grad(model, True)
+    elif phase == "phase_1_dialogue":
+        set_requires_grad(model.dialogue_branch, True)
+        set_requires_grad(model.classifier, True)
+        model.alpha.requires_grad_(True)
+        with torch.no_grad():
+            model.beta.fill_(0.0)
+        model.beta.requires_grad_(False)
+    elif phase == "phase_2_temporal":
+        set_requires_grad(model.temporal_encoder, True)
+        set_requires_grad(model.temporal_branch, True)
+        set_requires_grad(model.classifier, True)
+        model.beta.requires_grad_(True)
+        model.alpha.requires_grad_(False)
+    elif phase == "phase_3_fusion":
+        set_requires_grad(model, True)
+    else:
+        raise ValueError(f"Unsupported training phase: {phase_name!r}")
+    configure_trainable_gates(model, model_cfg)
+
+
+def make_optimizer_and_scheduler(
+    model: WavLMDualBranchTIMSerModel,
+    config: Mapping[str, Any],
+    train_dialogue_count: int,
+    max_epochs: int,
+) -> tuple[torch.optim.Optimizer, Any]:
+    params = trainable_parameters(model)
+    if not params:
+        raise RuntimeError("No trainable parameters for the current phase.")
+    optimizer = torch.optim.AdamW(
+        params,
+        lr=float(config["training"].get("learning_rate", 1e-4)),
+        weight_decay=float(config["training"].get("weight_decay", 1e-4)),
+    )
+    total_steps = max(1, int(train_dialogue_count) * int(max_epochs))
+    scheduler = create_scheduler(optimizer, config, total_steps)
+    return optimizer, scheduler
+
+
+def staged_phase_plan(training_stage: Mapping[str, Any], default_max_epochs: int) -> list[dict[str, Any]]:
+    mode = str(training_stage.get("mode", "end_to_end"))
+    if mode == "end_to_end":
+        return [{"name": "end_to_end", "epochs": int(default_max_epochs), "enabled": True}]
+    if mode != "3_phase":
+        raise ValueError("training_stage.mode must be one of: end_to_end, 3_phase")
+    return [
+        {
+            "name": "phase_1_dialogue",
+            "epochs": int(training_stage.get("stage_1_epochs", default_max_epochs)),
+            "enabled": bool(training_stage.get("stage_1_train_dialogue_branch", True)),
+        },
+        {
+            "name": "phase_2_temporal",
+            "epochs": int(training_stage.get("stage_2_epochs", default_max_epochs)),
+            "enabled": bool(training_stage.get("stage_2_freeze_dialogue_train_temporal", True)),
+        },
+        {
+            "name": "phase_3_fusion",
+            "epochs": int(training_stage.get("stage_3_epochs", max(1, default_max_epochs // 2))),
+            "enabled": bool(training_stage.get("stage_3_finetune_fusion", True)),
+        },
+    ]
+
+
 def save_dual_branch_predictions_csv(path: str | Path, rows: Sequence[Mapping[str, Any]]) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -364,6 +442,120 @@ def write_single_run_ablation_metrics(output_dir: Path, config: Mapping[str, Any
     save_json(output_dir / "ablation_metrics.json", {"runs": [row]})
 
 
+def train_model_with_phase_plan(
+    model: WavLMDualBranchTIMSerModel,
+    train_dialogues: Sequence[DialogueEmbedding],
+    val_dialogues: Sequence[DialogueEmbedding],
+    temporal_builder: TemporalInteractionFeatureBuilder,
+    temporal_policy: TemporalInputPolicy,
+    config: Mapping[str, Any],
+    device: torch.device,
+    output_dir: Path,
+    log_path: Path,
+    wandb_run: Any,
+    class_weights: Optional[torch.Tensor],
+) -> tuple[int, float, Dict[str, Any]]:
+    training_stage = config.get("training_stage", {"mode": "end_to_end"})
+    max_epochs = int(config["training"].get("max_epochs", 10))
+    phase_plan = [phase for phase in staged_phase_plan(training_stage, max_epochs) if phase["enabled"] and int(phase["epochs"]) > 0]
+    if not phase_plan:
+        raise ValueError("No enabled training phases. Check training_stage config.")
+
+    best_ua = -1.0
+    best_epoch = 0
+    best_validation_metrics: Dict[str, Any] = {}
+    global_epoch = 0
+    progress = bool(config["training"].get("progress_bar", True))
+    max_grad_norm = float(config["training"].get("gradient_clip", 1.0))
+
+    for phase in phase_plan:
+        phase_name = str(phase["name"])
+        phase_epochs = int(phase["epochs"])
+        configure_phase_trainability(model, phase_name, config["model"])
+        optimizer, scheduler = make_optimizer_and_scheduler(
+            model,
+            config,
+            train_dialogue_count=len(train_dialogues),
+            max_epochs=phase_epochs,
+        )
+        counts = parameter_counts(model)
+        append_log(
+            log_path,
+            (
+                f"phase_start={phase_name} epochs={phase_epochs} "
+                f"trainable={counts['trainable']:,} alpha_trainable={model.alpha.requires_grad} "
+                f"beta_trainable={model.beta.requires_grad}"
+            ),
+        )
+        for phase_epoch in range(1, phase_epochs + 1):
+            global_epoch += 1
+            train_output = run_dual_branch_dialogue_epoch(
+                model,
+                train_dialogues,
+                temporal_builder,
+                temporal_policy,
+                device,
+                optimizer=optimizer,
+                scheduler=scheduler,
+                class_weights=class_weights,
+                max_grad_norm=max_grad_norm,
+                progress=progress,
+                description=f"{config['experiment_name']} {phase_name} {phase_epoch}/{phase_epochs} train",
+            )
+            val_output = run_dual_branch_dialogue_epoch(
+                model,
+                val_dialogues,
+                temporal_builder,
+                temporal_policy,
+                device,
+                progress=progress,
+                description=f"{config['experiment_name']} {phase_name} {phase_epoch}/{phase_epochs} validation",
+            )
+            train_metrics = compute_ser_metrics(
+                train_output["targets"], train_output["predictions"], LABEL_NAMES, train_output["loss"], global_epoch
+            )
+            val_metrics = compute_ser_metrics(
+                val_output["targets"], val_output["predictions"], LABEL_NAMES, val_output["loss"], global_epoch
+            )
+            append_log(
+                log_path,
+                (
+                    f"phase={phase_name} phase_epoch={phase_epoch} global_epoch={global_epoch} "
+                    f"train_loss={train_metrics['loss']:.6f} val_loss={val_metrics['loss']:.6f} "
+                    f"val_WA={val_metrics['WA']:.6f} val_UA={val_metrics['UA']:.6f} "
+                    f"val_Macro-F1={val_metrics['Macro-F1']:.6f} "
+                    f"alpha={float(torch.tanh(model.alpha).detach().cpu().item()):.6f} "
+                    f"beta={float(torch.tanh(model.beta).detach().cpu().item()):.6f}"
+                ),
+            )
+            if wandb_run is not None:
+                wandb_run.log(
+                    {
+                        "epoch": global_epoch,
+                        "phase": phase_name,
+                        "phase_epoch": phase_epoch,
+                        "train/loss": train_metrics["loss"],
+                        "validation/loss": val_metrics["loss"],
+                        "validation/WA": val_metrics["WA"],
+                        "validation/UA": val_metrics["UA"],
+                        "validation/Macro-F1": val_metrics["Macro-F1"],
+                        "validation/WF1": val_metrics["WF1"],
+                        "gate/alpha": float(torch.tanh(model.alpha).detach().cpu().item()),
+                        "gate/beta": float(torch.tanh(model.beta).detach().cpu().item()),
+                        "learning_rate": optimizer.param_groups[0]["lr"],
+                    },
+                    step=global_epoch,
+                )
+
+            save_checkpoint(output_dir / "last.pth", model, config, global_epoch, val_metrics)
+            if float(val_metrics["UA"]) > best_ua:
+                best_ua = float(val_metrics["UA"])
+                best_epoch = global_epoch
+                best_validation_metrics = val_metrics
+                save_checkpoint(output_dir / "best.pth", model, config, global_epoch, val_metrics)
+    return best_epoch, best_ua, best_validation_metrics
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train dual-branch WavLM + temporal dialogue memory SER model.")
     parser.add_argument("--config", default="configs/dual_branch.yaml")
@@ -428,88 +620,28 @@ def main() -> None:
     append_log(log_path, f"initial_alpha={float(torch.tanh(model.alpha).detach().cpu().item()):.6f} initial_beta={float(torch.tanh(model.beta).detach().cpu().item()):.6f}")
     training_stage = config.get("training_stage", {"mode": "end_to_end"})
     append_log(log_path, f"training_stage={training_stage.get('mode', 'end_to_end')}")
-    if str(training_stage.get("mode", "end_to_end")) != "end_to_end":
-        append_log(log_path, "staged training hooks are configured but this script currently runs the default end_to_end path.")
 
-    optimizer = torch.optim.AdamW(
-        trainable_parameters(model),
-        lr=float(config["training"].get("learning_rate", 1e-4)),
-        weight_decay=float(config["training"].get("weight_decay", 1e-4)),
-    )
-    total_steps = max(1, len(train_dialogues) * int(config["training"].get("max_epochs", 10)))
-    scheduler = create_scheduler(optimizer, config, total_steps)
     wandb_run = init_wandb(config, output_dir, log_path)
     class_weights = (
         class_weights_from_dialogues(train_dialogues, int(config["model"].get("num_labels", 4)), device)
         if bool(config["training"].get("use_class_weights", False))
         else None
     )
+    best_epoch, best_ua, best_validation_metrics = train_model_with_phase_plan(
+        model=model,
+        train_dialogues=train_dialogues,
+        val_dialogues=val_dialogues,
+        temporal_builder=temporal_builder,
+        temporal_policy=temporal_policy,
+        config=config,
+        device=device,
+        output_dir=output_dir,
+        log_path=log_path,
+        wandb_run=wandb_run,
+        class_weights=class_weights,
+    )
 
-    best_ua = -1.0
-    best_epoch = 0
-    best_validation_metrics: Dict[str, Any] = {}
-    max_epochs = int(config["training"].get("max_epochs", 10))
     progress = bool(config["training"].get("progress_bar", True))
-    max_grad_norm = float(config["training"].get("gradient_clip", 1.0))
-    for epoch in range(1, max_epochs + 1):
-        train_output = run_dual_branch_dialogue_epoch(
-            model,
-            train_dialogues,
-            temporal_builder,
-            temporal_policy,
-            device,
-            optimizer=optimizer,
-            scheduler=scheduler,
-            class_weights=class_weights,
-            max_grad_norm=max_grad_norm,
-            progress=progress,
-            description=f"{config['experiment_name']} epoch {epoch}/{max_epochs} train",
-        )
-        val_output = run_dual_branch_dialogue_epoch(
-            model,
-            val_dialogues,
-            temporal_builder,
-            temporal_policy,
-            device,
-            progress=progress,
-            description=f"{config['experiment_name']} epoch {epoch}/{max_epochs} validation",
-        )
-        train_metrics = compute_ser_metrics(train_output["targets"], train_output["predictions"], LABEL_NAMES, train_output["loss"], epoch)
-        val_metrics = compute_ser_metrics(val_output["targets"], val_output["predictions"], LABEL_NAMES, val_output["loss"], epoch)
-        append_log(
-            log_path,
-            (
-                f"epoch={epoch} train_loss={train_metrics['loss']:.6f} "
-                f"val_loss={val_metrics['loss']:.6f} val_WA={val_metrics['WA']:.6f} "
-                f"val_UA={val_metrics['UA']:.6f} val_Macro-F1={val_metrics['Macro-F1']:.6f} "
-                f"alpha={float(torch.tanh(model.alpha).detach().cpu().item()):.6f} "
-                f"beta={float(torch.tanh(model.beta).detach().cpu().item()):.6f}"
-            ),
-        )
-        if wandb_run is not None:
-            wandb_run.log(
-                {
-                    "epoch": epoch,
-                    "train/loss": train_metrics["loss"],
-                    "validation/loss": val_metrics["loss"],
-                    "validation/WA": val_metrics["WA"],
-                    "validation/UA": val_metrics["UA"],
-                    "validation/Macro-F1": val_metrics["Macro-F1"],
-                    "validation/WF1": val_metrics["WF1"],
-                    "gate/alpha": float(torch.tanh(model.alpha).detach().cpu().item()),
-                    "gate/beta": float(torch.tanh(model.beta).detach().cpu().item()),
-                    "learning_rate": optimizer.param_groups[0]["lr"],
-                },
-                step=epoch,
-            )
-
-        save_checkpoint(output_dir / "last.pth", model, config, epoch, val_metrics)
-        if float(val_metrics["UA"]) > best_ua:
-            best_ua = float(val_metrics["UA"])
-            best_epoch = epoch
-            best_validation_metrics = val_metrics
-            save_checkpoint(output_dir / "best.pth", model, config, epoch, val_metrics)
-
     checkpoint = torch.load(output_dir / "best.pth", map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
     test_output = run_dual_branch_dialogue_epoch(

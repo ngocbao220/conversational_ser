@@ -65,10 +65,13 @@ training:
   progress_bar: true
 
 training_stage:
-  mode: end_to_end
+  mode: 3_phase
   stage_1_train_dialogue_branch: true
+  stage_1_epochs: 30
   stage_2_freeze_dialogue_train_temporal: true
+  stage_2_epochs: 30
   stage_3_finetune_fusion: true
+  stage_3_epochs: 10
 
 analysis:
   strong_overlap_threshold: 0.25
