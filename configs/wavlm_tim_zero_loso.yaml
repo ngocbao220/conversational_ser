@@ -1,5 +1,5 @@
-experiment_name: wavlm_tim_loso
-output_dir: results/wavlm_tim_loso
+experiment_name: wavlm_tim_zero_loso
+output_dir: results/wavlm_tim_zero_loso
 seed: 42
 
 dataset:
@@ -23,7 +23,7 @@ model:
   use_mal_memory: true
   use_temporal_features: true
   temporal_feature_mode: real
-  temporal_input_mode: real
+  temporal_input_mode: zero
   disabled_temporal_feature_groups: []
   temporal_shuffle_seed: 0
   temporal_feature_dim: 16
@@ -70,6 +70,6 @@ analysis:
 wandb:
   use_wandb: true
   project: conversational-SER
-  run_name: wavlm_tim_loso
+  run_name: wavlm_tim_zero_loso
   entity: null
   mode: online

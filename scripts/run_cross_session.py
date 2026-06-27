@@ -18,6 +18,7 @@ TRAINER_MODULES = {
     "baseline": "scripts.train_wavlm_baseline",
     "mal": "scripts.train_wavlm_mal",
     "tim": "scripts.train_wavlm_tim",
+    "dual_branch": "scripts.train_dual_branch",
 }
 METRIC_NAMES = ("WA", "UA", "WF1", "Macro-F1")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

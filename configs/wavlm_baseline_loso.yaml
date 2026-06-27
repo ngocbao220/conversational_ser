@@ -50,7 +50,7 @@ training:
   gradient_clip: 1.0
   use_class_weights: false
   num_workers: 0
-  progress_bar: true
+  progress_bar: false
 
 wandb:
   use_wandb: true

@@ -9,11 +9,17 @@ __all__ = [
     "WavLMSERBaselineConfig",
     "WavLM_MALSerModel",
     "WavLMTIMConfig",
+    "WavLMDualBranchTIMConfig",
+    "WavLMDualBranchTIMSerModel",
     "WavLMTIMSerModel",
     "WavLMMALConfig",
+    "DialogueMemoryBranch",
+    "TemporalInteractionEncoder",
+    "TemporalMemoryBranch",
     "TemporalFeatureEncoder",
     "TIMMemoryModule",
     "build_b0_model",
+    "build_wavlm_dual_branch_tim_ser_model",
     "build_wavlm_mal_ser_model",
     "build_wavlm_ser_baseline",
     "build_wavlm_tim_ser_model",
@@ -33,6 +39,17 @@ def __getattr__(name: str):
         from models import wavlm_mal
 
         return getattr(wavlm_mal, name)
+    if name in {
+        "DialogueMemoryBranch",
+        "TemporalInteractionEncoder",
+        "TemporalMemoryBranch",
+        "WavLMDualBranchTIMConfig",
+        "WavLMDualBranchTIMSerModel",
+        "build_wavlm_dual_branch_tim_ser_model",
+    }:
+        from models import wavlm_dual_branch_tim
+
+        return getattr(wavlm_dual_branch_tim, name)
     if name in {
         "TemporalFeatureEncoder",
         "TIMMemoryModule",

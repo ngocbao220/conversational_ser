@@ -1,0 +1,93 @@
+base_config: configs/dual_branch.yaml
+output_root: results/dual_branch
+variants:
+  - name: dual_branch_full
+    overrides:
+      run_name: dual_branch_full
+      output_dir: results/dual_branch/full
+      model:
+        temporal_input_mode: real
+        disabled_temporal_feature_groups: []
+        fix_alpha_zero: false
+        fix_beta_zero: false
+
+  - name: dual_branch_no_temporal
+    overrides:
+      run_name: dual_branch_no_temporal
+      output_dir: results/dual_branch/no_temporal
+      model:
+        temporal_input_mode: real
+        disabled_temporal_feature_groups: []
+        fix_alpha_zero: false
+        fix_beta_zero: true
+
+  - name: dual_branch_temporal_only
+    overrides:
+      run_name: dual_branch_temporal_only
+      output_dir: results/dual_branch/temporal_only
+      model:
+        temporal_input_mode: real
+        disabled_temporal_feature_groups: []
+        fix_alpha_zero: true
+        fix_beta_zero: false
+
+  - name: dual_branch_zero_temporal
+    overrides:
+      run_name: dual_branch_zero_temporal
+      output_dir: results/dual_branch/zero_temporal
+      model:
+        temporal_input_mode: zero
+        disabled_temporal_feature_groups: []
+        fix_alpha_zero: false
+        fix_beta_zero: false
+
+  - name: dual_branch_shuffled_temporal
+    overrides:
+      run_name: dual_branch_shuffled_temporal
+      output_dir: results/dual_branch/shuffled_temporal
+      model:
+        temporal_input_mode: shuffled
+        temporal_shuffle_seed: 42
+        disabled_temporal_feature_groups: []
+        fix_alpha_zero: false
+        fix_beta_zero: false
+
+  - name: dual_branch_no_overlap
+    overrides:
+      run_name: dual_branch_no_overlap
+      output_dir: results/dual_branch/no_overlap
+      model:
+        temporal_input_mode: real
+        disabled_temporal_feature_groups: [overlap]
+
+  - name: dual_branch_no_gap
+    overrides:
+      run_name: dual_branch_no_gap
+      output_dir: results/dual_branch/no_gap
+      model:
+        temporal_input_mode: real
+        disabled_temporal_feature_groups: [gap]
+
+  - name: dual_branch_no_duration
+    overrides:
+      run_name: dual_branch_no_duration
+      output_dir: results/dual_branch/no_duration
+      model:
+        temporal_input_mode: real
+        disabled_temporal_feature_groups: [duration]
+
+  - name: dual_branch_no_speaker_switch
+    overrides:
+      run_name: dual_branch_no_speaker_switch
+      output_dir: results/dual_branch/no_speaker_switch
+      model:
+        temporal_input_mode: real
+        disabled_temporal_feature_groups: [speaker_switch]
+
+  - name: dual_branch_no_turn_position
+    overrides:
+      run_name: dual_branch_no_turn_position
+      output_dir: results/dual_branch/no_turn_position
+      model:
+        temporal_input_mode: real
+        disabled_temporal_feature_groups: [turn_position]

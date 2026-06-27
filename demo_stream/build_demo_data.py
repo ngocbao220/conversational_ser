@@ -44,6 +44,21 @@ METADATA_LABEL_MAP = {
 TRANSCRIPT_LINE = re.compile(
     r"^(?P<utterance_id>\S+)\s+\[(?P<start>\d+(?:\.\d+)?)-(?P<end>\d+(?:\.\d+)?)\]:\s*(?P<text>.*)$"
 )
+EVAL_LINE = re.compile(
+    r"^\[(?P<start>\d+(?:\.\d+)?)\s*-\s*(?P<end>\d+(?:\.\d+)?)\]\s+"
+    r"(?P<utterance_id>\S+)\s+(?P<label>\S+)"
+)
+RAW_LABEL_MAP = {
+    "ang": "angry",
+    "fru": "angry",
+    "dis": "angry",
+    "hap": "happy",
+    "exc": "happy",
+    "sur": "happy",
+    "neu": "neutral",
+    "sad": "sad",
+    "fea": "sad",
+}
 
 
 def read_csv_by_utterance(path: Path) -> dict[str, dict[str, str]]:
@@ -54,6 +69,63 @@ def read_csv_by_utterance(path: Path) -> dict[str, dict[str, str]]:
 def read_csv_rows(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
+
+
+def utterance_turn_index(utterance_id: str) -> int | None:
+    last = utterance_id.split("_")[-1]
+    digits = re.sub(r"\D", "", last)
+    return int(digits) if digits else None
+
+
+def utterance_speaker_role(utterance_id: str) -> str:
+    last = utterance_id.split("_")[-1]
+    return last[0] if last and last[0] in {"F", "M"} else ""
+
+
+def read_evaluation_labels(session_ids: set[str]) -> dict[str, str]:
+    labels: dict[str, str] = {}
+    for session_id in session_ids:
+        session_num = session_id.replace("Ses", "").lstrip("0")
+        eval_dir = IEMOCAP_ROOT / f"Session{session_num}" / "dialog" / "EmoEvaluation"
+        if not eval_dir.exists():
+            continue
+        for path in eval_dir.glob("*.txt"):
+            with path.open(encoding="utf-8", errors="replace") as handle:
+                for line in handle:
+                    match = EVAL_LINE.match(line.strip())
+                    if match:
+                        labels[match.group("utterance_id")] = match.group("label")
+    return labels
+
+
+def build_metadata_rows_from_iemocap(session_ids: set[str]) -> list[dict[str, str]]:
+    transcript_rows = read_transcription_times(session_ids)
+    raw_labels = read_evaluation_labels(session_ids)
+    rows = []
+    for utterance_id, transcript in sorted(transcript_rows.items()):
+        dialogue_id = "_".join(utterance_id.split("_")[:-1])
+        session_id = utterance_id[:5]
+        if session_id not in session_ids:
+            continue
+        speaker_role = utterance_speaker_role(utterance_id)
+        turn_index = utterance_turn_index(utterance_id)
+        audio_path = resolve_iemocap_audio_path(utterance_id)
+        duration = float(transcript["end_time"]) - float(transcript["start_time"])
+        rows.append(
+            {
+                "utterance_id": utterance_id,
+                "dialogue_id": dialogue_id,
+                "session_id": session_id,
+                "speaker_id": f"{session_id}_{speaker_role}" if speaker_role else "",
+                "speaker_role": speaker_role,
+                "turn_index": str(turn_index) if turn_index is not None else "",
+                "duration": f"{duration:.4f}",
+                "transcript": str(transcript.get("transcript", "")),
+                "audio_path": audio_path,
+                "original_label": raw_labels.get(utterance_id, ""),
+            }
+        )
+    return rows
 
 
 def resolve_prediction_files() -> dict[str, Path]:
@@ -99,7 +171,31 @@ def as_float(value: str | None, default: float = 0.0) -> float:
 
 
 def canonical_metadata_label(row: dict[str, str]) -> str:
-    return METADATA_LABEL_MAP.get(str(row.get("original_label", "")).strip().lower(), "")
+    raw_label = str(row.get("original_label", "")).strip().lower()
+    return RAW_LABEL_MAP.get(raw_label) or METADATA_LABEL_MAP.get(raw_label, "")
+
+
+def resolve_iemocap_audio_path(utterance_id: str, metadata_path: str = "") -> str:
+    dialogue_id = "_".join(str(utterance_id).split("_")[:-1])
+    session_match = re.match(r"Ses(?P<session>\d{2})", str(utterance_id))
+    if dialogue_id and session_match:
+        session_num = str(int(session_match.group("session")))
+        direct_path = (
+            IEMOCAP_ROOT
+            / f"Session{session_num}"
+            / "sentences"
+            / "wav"
+            / dialogue_id
+            / f"{utterance_id}.wav"
+        )
+        if direct_path.exists():
+            return str(direct_path.relative_to(ROOT))
+
+    if metadata_path:
+        candidate = ROOT / metadata_path
+        if candidate.exists():
+            return metadata_path
+    return metadata_path
 
 
 def prediction_payload(row: dict[str, str] | None) -> dict[str, object] | None:
@@ -166,10 +262,15 @@ def compare_predictions(model_predictions: dict[str, dict[str, object]], gold_la
 
 
 def main() -> None:
-    metadata_rows = [
-        row for row in read_csv_rows(METADATA_PATH)
-        if row.get("session_id") in TARGET_SESSIONS
-    ]
+    if METADATA_PATH.exists():
+        metadata_rows = [
+            row for row in read_csv_rows(METADATA_PATH)
+            if row.get("session_id") in TARGET_SESSIONS
+        ]
+        metadata_source = str(METADATA_PATH.relative_to(ROOT))
+    else:
+        metadata_rows = build_metadata_rows_from_iemocap(TARGET_SESSIONS)
+        metadata_source = "iemocap"
     metadata = {row["utterance_id"]: row for row in metadata_rows}
     transcription_times = read_transcription_times(TARGET_SESSIONS)
     prediction_files = resolve_prediction_files()
@@ -228,7 +329,7 @@ def main() -> None:
             if first_pred.get("end_time") else None,
             "duration": round(as_float(meta.get("duration") or first_pred.get("duration")), 3),
             "transcript": (str(transcript_row.get("transcript") or meta.get("transcript") or "")).strip(),
-            "audio_path": meta.get("audio_path", ""),
+            "audio_path": resolve_iemocap_audio_path(utterance_id, meta.get("audio_path", "")),
             "gold_label": gold_label,
             "predictions": model_predictions,
             "comparison": comparison,
@@ -260,7 +361,7 @@ def main() -> None:
 
     payload = {
         "generated_from": {
-            "metadata": str(METADATA_PATH.relative_to(ROOT)),
+            "metadata": metadata_source,
             "predictions": {
                 model: str(path.relative_to(ROOT)) for model, path in prediction_files.items()
             },
