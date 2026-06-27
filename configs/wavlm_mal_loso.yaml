@@ -1,5 +1,5 @@
-experiment_name: wavlm_mal_loso
-output_dir: results/wavlm_mal_loso
+experiment_name: wavlm_mal_fair_3phase
+output_dir: results/fair_3phase/wavlm_mal
 seed: 42
 
 dataset:
@@ -20,7 +20,7 @@ model:
   num_labels: 4
   freeze_wavlm: true
   unfreeze_last_n_layers: 0
-  memory_dim: 256
+  memory_dim: 128
   temporal_feature_dim: 16
   use_temporal_features: false
   temporal_feature_mode: zero
@@ -34,7 +34,7 @@ precompute:
   batch_size: 16
 
 cross_session:
-  enabled: true
+  enabled: false
   test_sessions: [1, 2, 3, 4, 5]
   run_name: null
 
@@ -42,12 +42,12 @@ training:
   device: auto
   batch_size: 16
   eval_batch_size: 16
-  max_epochs: 100
+  max_epochs: 70
   wavlm_batch_size: 4
   eval_wavlm_batch_size: 4
   learning_rate: 0.0001
   learning_rate_classifier: 0.0001
-  weight_decay: 0.01
+  weight_decay: 0.0001
   scheduler: cosine
   warmup_ratio: 0.1
   gradient_clip: 1.0
@@ -58,6 +58,6 @@ training:
 wandb:
   use_wandb: true
   project: conversational-SER
-  run_name: wavlm_mal_loso
+  run_name: wavlm_mal_fair_3phase
   entity: null
   mode: online
