@@ -14,6 +14,8 @@ dataset:
 model:
   wavlm_model_name: microsoft/wavlm-base
   num_labels: 4
+  freeze_wavlm: true
+  unfreeze_last_n_layers: 0
   memory_dim: 256
   temporal_feature_dim: 16
   use_temporal_features: false
@@ -35,6 +37,8 @@ cross_session:
 training:
   device: auto
   max_epochs: 100
+  wavlm_batch_size: 4
+  eval_wavlm_batch_size: 4
   learning_rate: 0.0001
   weight_decay: 0.01
   scheduler: cosine

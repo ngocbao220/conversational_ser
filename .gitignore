@@ -4,9 +4,11 @@ __pycache__/
 *.pyc
 .jupyter/
 .DS_Store
+.matplotlib_cache/
 iemocap_export/
 outputs/
 iemocap/
 notebook/
 reports/
 results/
+data/

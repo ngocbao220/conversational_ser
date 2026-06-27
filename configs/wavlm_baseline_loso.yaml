@@ -15,6 +15,8 @@ model:
   wavlm_model_name: microsoft/wavlm-base
   num_labels: 4
   pooling: mean
+  freeze_wavlm: true
+  unfreeze_last_n_layers: 0
   dropout: 0.2
 
 precompute:
@@ -33,6 +35,8 @@ training:
   device: auto
   batch_size: 16
   eval_batch_size: 16
+  wavlm_batch_size: 4
+  eval_wavlm_batch_size: 4
   max_epochs: 100
   learning_rate_classifier: 0.0001
   weight_decay: 0.01
