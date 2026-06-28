@@ -1,6 +1,6 @@
-run_name: dual_branch
-experiment_name: wavlm_dual_branch_tim
-output_dir: results/dual_branch
+run_name: dual_branch_3phase_fair_ablation_loso
+experiment_name: wavlm_dual_branch_tim_3phase_fair_ablation_loso
+output_dir: results/fair_ablation_loso/dual_branch_3phase
 seed: 42
 
 dataset:
@@ -44,7 +44,7 @@ precompute:
   batch_size: 16
 
 cross_session:
-  enabled: false
+  enabled: true
   test_sessions: [1, 2, 3, 4, 5]
   run_name: null
 
@@ -53,7 +53,7 @@ training:
   batch_mode: dialogue
   batch_size: 16
   eval_batch_size: 16
-  max_epochs: 10
+  max_epochs: 70
   learning_rate: 0.0001
   weight_decay: 0.0001
   scheduler: cosine
@@ -62,7 +62,7 @@ training:
   selection_metric: UA
   use_class_weights: false
   num_workers: 0
-  progress_bar: true
+  progress_bar: false
 
 training_stage:
   mode: 3_phase
@@ -79,6 +79,6 @@ analysis:
 wandb:
   use_wandb: true
   project: conversational-SER
-  run_name: dual_branch
+  run_name: dual_branch_3phase_fair_ablation_loso
   entity: null
   mode: online

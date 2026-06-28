@@ -1,5 +1,5 @@
-experiment_name: wavlm_tim_loso
-output_dir: results/wavlm_tim_loso
+experiment_name: wavlm_tim_end2end_fair_ablation_loso
+output_dir: results/fair_ablation_loso/wavlm_tim_end2end
 seed: 42
 
 dataset:
@@ -28,7 +28,7 @@ model:
   temporal_shuffle_seed: 0
   temporal_feature_dim: 16
   temporal_emb_dim: 64
-  memory_dim: 256
+  memory_dim: 128
   residual_gate_init: 0.0
   short_gap_threshold: 0.3
   long_gap_threshold: 1.0
@@ -51,12 +51,12 @@ training:
   device: auto
   batch_size: 16
   eval_batch_size: 16
-  max_epochs: 100
+  max_epochs: 70
   wavlm_batch_size: 4
   eval_wavlm_batch_size: 4
   learning_rate: 0.0001
   learning_rate_classifier: 0.0001
-  weight_decay: 0.01
+  weight_decay: 0.0001
   scheduler: cosine
   warmup_ratio: 0.1
   gradient_clip: 1.0
@@ -70,6 +70,6 @@ analysis:
 wandb:
   use_wandb: true
   project: conversational-SER
-  run_name: wavlm_tim_loso
+  run_name: wavlm_tim_end2end_fair_ablation_loso
   entity: null
   mode: online

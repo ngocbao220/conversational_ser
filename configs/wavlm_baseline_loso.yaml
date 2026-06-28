@@ -1,5 +1,5 @@
-experiment_name: wavlm_baseline_fair_3phase
-output_dir: results/fair_3phase/wavlm_baseline
+experiment_name: wavlm_baseline_fair_ablation_loso
+output_dir: results/fair_ablation_loso/wavlm_baseline
 seed: 42
 
 dataset:
@@ -31,7 +31,7 @@ precompute:
   batch_size: 16
 
 cross_session:
-  enabled: false
+  enabled: true
   test_sessions: [1, 2, 3, 4, 5]
   run_name: null
 
@@ -55,6 +55,6 @@ training:
 wandb:
   use_wandb: true
   project: conversational-SER
-  run_name: wavlm_baseline_fair_3phase
+  run_name: wavlm_baseline_fair_ablation_loso
   entity: null
   mode: online
