@@ -53,7 +53,7 @@ training:
   batch_mode: dialogue
   batch_size: 16
   eval_batch_size: 16
-  max_epochs: 70
+  max_epochs: 150
   learning_rate: 0.0001
   weight_decay: 0.0001
   scheduler: cosine
@@ -67,11 +67,11 @@ training:
 training_stage:
   mode: 3_phase
   stage_1_train_dialogue_branch: true
-  stage_1_epochs: 30
+  stage_1_epochs: 60
   stage_2_freeze_dialogue_train_temporal: true
-  stage_2_epochs: 30
+  stage_2_epochs: 60
   stage_3_finetune_fusion: true
-  stage_3_epochs: 10
+  stage_3_epochs: 30
 
 analysis:
   strong_overlap_threshold: 0.25

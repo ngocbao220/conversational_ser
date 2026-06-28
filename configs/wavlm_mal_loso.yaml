@@ -42,7 +42,7 @@ training:
   device: auto
   batch_size: 16
   eval_batch_size: 16
-  max_epochs: 70
+  max_epochs: 150
   wavlm_batch_size: 4
   eval_wavlm_batch_size: 4
   learning_rate: 0.0001
