@@ -31,6 +31,50 @@ TEMPORAL_FEATURE_NAMES = [
     "speaker_prev_turn_count_norm",
 ]
 
+TIM_V2_RECOMMENDED_FEATURE_NAMES = [
+    "duration",
+    "gap_prev",
+    "prev_gap_abs",
+    "turn_index_norm",
+    "previous_mean_gap",
+    "window3_average_gap",
+    "window5_average_gap",
+    "window3_gap_variance",
+    "window5_gap_variance",
+    "immediate_response",
+    "short_response",
+    "long_pause",
+    "relative_gap_to_speaker_mean",
+    "silence_density_10s",
+    "interaction_density_10s",
+    "rhythm_variance_window5",
+    "rapid_exchange_state",
+    "conflict_like_state",
+    "hesitation_state",
+    "speaker_prev_mean_gap",
+    "speaker_prev_mean_duration",
+    "speaker_dominance_time_so_far",
+    "speaker_prev_overlap_rate",
+    "speaker_prev_interruption_rate",
+    "speaker_persistence_so_far",
+    "speaker_switch",
+    "same_speaker",
+    "speaker_switch_frequency_window3",
+    "speaker_switch_frequency_window5",
+    "overlap_prev",
+    "overlap_ratio",
+    "is_overlap",
+    "strong_overlap",
+    "overlap_frequency_window3",
+    "overlap_frequency_window5",
+    "consecutive_overlap_count",
+]
+
+TEMPORAL_FEATURE_SETS = {
+    "v1": TEMPORAL_FEATURE_NAMES,
+    "recommended_v2": TIM_V2_RECOMMENDED_FEATURE_NAMES,
+}
+
 BINARY_TEMPORAL_FEATURES = {
     "is_overlap",
     "is_interrupting_prev",
@@ -38,6 +82,11 @@ BINARY_TEMPORAL_FEATURES = {
     "same_speaker",
     "short_response",
     "long_pause",
+    "immediate_response",
+    "strong_overlap",
+    "rapid_exchange_state",
+    "conflict_like_state",
+    "hesitation_state",
 }
 
 TEMPORAL_FEATURE_GROUPS = {
@@ -60,6 +109,7 @@ class TemporalInputPolicy:
     mode: str = "real"
     disabled_feature_groups: tuple[str, ...] = ()
     shuffle_seed: int = 0
+    feature_names: tuple[str, ...] = tuple(TEMPORAL_FEATURE_NAMES)
 
     def __post_init__(self) -> None:
         if self.mode not in {"real", "zero", "shuffled"}:
@@ -79,20 +129,21 @@ class TemporalInputPolicy:
             mode=str(model_cfg.get("temporal_input_mode", "real")),
             disabled_feature_groups=tuple(str(group) for group in raw_groups),
             shuffle_seed=int(model_cfg.get("temporal_shuffle_seed", 0)),
+            feature_names=tuple(TEMPORAL_FEATURE_SETS.get(str(model_cfg.get("temporal_feature_set", "v1")), TEMPORAL_FEATURE_NAMES)),
         )
 
     def apply(self, features: torch.Tensor, dialogue_id: str) -> torch.Tensor:
-        if features.ndim != 2 or features.shape[1] != len(TEMPORAL_FEATURE_NAMES):
+        if features.ndim != 2 or features.shape[1] != len(self.feature_names):
             raise ValueError(
                 "Expected temporal feature tensor with shape "
-                f"[num_utterances, {len(TEMPORAL_FEATURE_NAMES)}], got {tuple(features.shape)}."
+                f"[num_utterances, {len(self.feature_names)}], got {tuple(features.shape)}."
             )
         transformed = features.clone()
         if self.mode == "zero":
             return torch.zeros_like(transformed)
 
         for group in self.disabled_feature_groups:
-            indices = [TEMPORAL_FEATURE_NAMES.index(name) for name in TEMPORAL_FEATURE_GROUPS[group]]
+            indices = [self.feature_names.index(name) for name in TEMPORAL_FEATURE_GROUPS[group] if name in self.feature_names]
             transformed[:, indices] = 0.0
 
         if self.mode == "shuffled" and len(transformed) > 1:
@@ -116,6 +167,9 @@ class TemporalFeatureStats:
     short_gap_threshold: float
     long_gap_threshold: float
     overlap_threshold: float
+    strong_overlap_ratio_threshold: float = 0.30
+    immediate_gap_threshold: float = 0.10
+    density_window_seconds: float = 10.0
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -128,6 +182,9 @@ class TemporalFeatureStats:
             "short_gap_threshold": self.short_gap_threshold,
             "long_gap_threshold": self.long_gap_threshold,
             "overlap_threshold": self.overlap_threshold,
+            "strong_overlap_ratio_threshold": self.strong_overlap_ratio_threshold,
+            "immediate_gap_threshold": self.immediate_gap_threshold,
+            "density_window_seconds": self.density_window_seconds,
         }
 
     @classmethod
@@ -142,6 +199,9 @@ class TemporalFeatureStats:
             short_gap_threshold=float(payload["short_gap_threshold"]),
             long_gap_threshold=float(payload["long_gap_threshold"]),
             overlap_threshold=float(payload["overlap_threshold"]),
+            strong_overlap_ratio_threshold=float(payload.get("strong_overlap_ratio_threshold", 0.30)),
+            immediate_gap_threshold=float(payload.get("immediate_gap_threshold", 0.10)),
+            density_window_seconds=float(payload.get("density_window_seconds", 10.0)),
         )
 
 
@@ -151,18 +211,32 @@ class TemporalInteractionFeatureBuilder:
         short_gap_threshold: float = 0.3,
         long_gap_threshold: float = 1.0,
         overlap_threshold: float = 0.05,
+        feature_set: str = "v1",
+        strong_overlap_ratio_threshold: float = 0.30,
+        immediate_gap_threshold: float = 0.10,
+        density_window_seconds: float = 10.0,
         eps: float = 1e-6,
         stats: TemporalFeatureStats | None = None,
     ) -> None:
         self.short_gap_threshold = float(short_gap_threshold)
         self.long_gap_threshold = float(long_gap_threshold)
         self.overlap_threshold = float(overlap_threshold)
+        self.strong_overlap_ratio_threshold = float(strong_overlap_ratio_threshold)
+        self.immediate_gap_threshold = float(immediate_gap_threshold)
+        self.density_window_seconds = float(density_window_seconds)
         self.eps = float(eps)
         self.stats = stats
+        self.feature_set = feature_set
+        if stats is not None:
+            self.feature_names = list(stats.feature_names)
+        else:
+            if feature_set not in TEMPORAL_FEATURE_SETS:
+                raise ValueError(f"Unknown temporal feature_set={feature_set!r}. Expected one of {sorted(TEMPORAL_FEATURE_SETS)}.")
+            self.feature_names = list(TEMPORAL_FEATURE_SETS[feature_set])
 
     @property
     def feature_dim(self) -> int:
-        return len(TEMPORAL_FEATURE_NAMES)
+        return len(self.feature_names)
 
     def fit(self, train_dialogues: Sequence[DialogueEmbedding]) -> TemporalFeatureStats:
         max_train_dialogue_length = max((len(dialogue.rows) for dialogue in train_dialogues), default=1)
@@ -172,22 +246,27 @@ class TemporalInteractionFeatureBuilder:
 
         mean: Dict[str, float] = {}
         std: Dict[str, float] = {}
-        for name in CONTINUOUS_TEMPORAL_FEATURES:
+        continuous_feature_names = [name for name in self.feature_names if name not in BINARY_TEMPORAL_FEATURES]
+        binary_feature_names = [name for name in self.feature_names if name in BINARY_TEMPORAL_FEATURES]
+        for name in continuous_feature_names:
             values = np.asarray([row[name] for row in raw_rows], dtype=np.float32)
             mean[name] = float(values.mean()) if values.size else 0.0
             value_std = float(values.std()) if values.size else 1.0
             std[name] = value_std if value_std > self.eps else 1.0
 
         self.stats = TemporalFeatureStats(
-            feature_names=list(TEMPORAL_FEATURE_NAMES),
-            continuous_feature_names=list(CONTINUOUS_TEMPORAL_FEATURES),
-            binary_feature_names=sorted(BINARY_TEMPORAL_FEATURES),
+            feature_names=list(self.feature_names),
+            continuous_feature_names=list(continuous_feature_names),
+            binary_feature_names=list(binary_feature_names),
             mean=mean,
             std=std,
             max_train_dialogue_length=max_train_dialogue_length,
             short_gap_threshold=self.short_gap_threshold,
             long_gap_threshold=self.long_gap_threshold,
             overlap_threshold=self.overlap_threshold,
+            strong_overlap_ratio_threshold=self.strong_overlap_ratio_threshold,
+            immediate_gap_threshold=self.immediate_gap_threshold,
+            density_window_seconds=self.density_window_seconds,
         )
         return self.stats
 
@@ -206,6 +285,9 @@ class TemporalInteractionFeatureBuilder:
             short_gap_threshold=stats.short_gap_threshold,
             long_gap_threshold=stats.long_gap_threshold,
             overlap_threshold=stats.overlap_threshold,
+            strong_overlap_ratio_threshold=stats.strong_overlap_ratio_threshold,
+            immediate_gap_threshold=stats.immediate_gap_threshold,
+            density_window_seconds=stats.density_window_seconds,
             stats=stats,
         )
 
@@ -216,9 +298,9 @@ class TemporalInteractionFeatureBuilder:
         features = []
         for row in raw_rows:
             values = []
-            for name in TEMPORAL_FEATURE_NAMES:
+            for name in self.stats.feature_names:
                 value = float(row[name])
-                if name in CONTINUOUS_TEMPORAL_FEATURES:
+                if name in self.stats.continuous_feature_names:
                     value = (value - self.stats.mean[name]) / self.stats.std[name]
                 values.append(value)
             features.append(values)
@@ -235,7 +317,14 @@ class TemporalInteractionFeatureBuilder:
         features: List[Dict[str, float]] = []
         speaker_history: Dict[str, Dict[str, float]] = {}
         previous_row: Mapping[str, Any] | None = None
-        previous_gap = 0.0
+        gaps: List[float] = []
+        overlaps: List[float] = []
+        interruptions: List[float] = []
+        switches: List[float] = []
+        previous_raw_rows: List[Dict[str, float]] = []
+        total_turns_so_far = 0.0
+        total_time_so_far = 0.0
+        consecutive_overlap = 0.0
         max_length = max(1, int(max_train_dialogue_length))
         for turn_index, row in enumerate(rows):
             start_time = float(row["start_time"])
@@ -257,10 +346,18 @@ class TemporalInteractionFeatureBuilder:
 
             history = speaker_history.get(
                 speaker_id,
-                {"turn_count": 0.0, "overlap_count": 0.0, "gap_sum": 0.0, "duration_sum": 0.0},
+                {
+                    "turn_count": 0.0,
+                    "overlap_count": 0.0,
+                    "interruption_count": 0.0,
+                    "gap_sum": 0.0,
+                    "duration_sum": 0.0,
+                    "same_speaker_count": 0.0,
+                },
             )
             previous_turns = history["turn_count"]
             speaker_prev_overlap_rate = history["overlap_count"] / max(previous_turns, 1.0)
+            speaker_prev_interruption_rate = history["interruption_count"] / max(previous_turns, 1.0)
             speaker_prev_mean_gap = history["gap_sum"] / max(previous_turns, 1.0)
             speaker_prev_mean_duration = history["duration_sum"] / max(previous_turns, 1.0)
             speaker_prev_turn_count_norm = previous_turns / max_length
@@ -269,32 +366,96 @@ class TemporalInteractionFeatureBuilder:
             same_speaker = 1.0 if has_previous and speaker_id == previous_speaker else 0.0
             is_overlap = 1.0 if has_previous and overlap_prev > self.overlap_threshold else 0.0
             is_interrupting_prev = 1.0 if has_previous and speaker_switch and start_time < float(previous_row["end_time"]) else 0.0
+            strong_overlap = 1.0 if overlap_prev / max(duration, self.eps) >= self.strong_overlap_ratio_threshold else 0.0
+            consecutive_overlap = consecutive_overlap + 1.0 if is_overlap else 0.0
+            gaps.append(gap_prev)
+            overlaps.append(is_overlap)
+            interruptions.append(is_interrupting_prev)
+            switches.append(speaker_switch)
+
+            def window_mean(values: Sequence[float], window: int) -> float:
+                subset = list(values)[-window:]
+                return float(np.mean(subset)) if subset else 0.0
+
+            def window_var(values: Sequence[float], window: int) -> float:
+                subset = list(values)[-window:]
+                return float(np.var(subset)) if len(subset) > 1 else 0.0
+
+            previous_mean_gap = float(np.mean(gaps[:-1])) if len(gaps) > 1 else 0.0
+            relative_gap_to_speaker_mean = gap_prev - speaker_prev_mean_gap if previous_turns > 0 else 0.0
+            window3_average_gap = window_mean(gaps, 3)
+            window5_average_gap = window_mean(gaps, 5)
+            window3_gap_variance = window_var(gaps, 3)
+            window5_gap_variance = window_var(gaps, 5)
+            speaker_switch_frequency_window3 = window_mean(switches, 3)
+            speaker_switch_frequency_window5 = window_mean(switches, 5)
+            overlap_frequency_window3 = window_mean(overlaps, 3)
+            overlap_frequency_window5 = window_mean(overlaps, 5)
+            interaction_window_rows = [
+                raw for raw in previous_raw_rows
+                if start_time - raw["start_time"] <= self.density_window_seconds
+            ]
+            interaction_density_10s = (len(interaction_window_rows) + 1.0) / self.density_window_seconds
+            silence_density_10s = sum(max(0.0, value) for value in gaps[-5:]) / self.density_window_seconds
+            rapid_exchange_state = (
+                1.0 if window5_average_gap < self.short_gap_threshold and speaker_switch_frequency_window5 >= 0.5 else 0.0
+            )
+            conflict_like_state = 1.0 if overlap_frequency_window5 >= 0.4 or window_mean(interruptions, 5) >= 0.3 else 0.0
+            hesitation_state = 1.0 if gap_prev > self.long_gap_threshold or window5_average_gap > self.long_gap_threshold else 0.0
             row_features = {
+                "start_time": start_time,
                 "duration": duration,
                 "gap_prev": gap_prev,
                 "overlap_prev": overlap_prev,
                 "overlap_ratio": overlap_prev / max(duration, self.eps),
                 "is_overlap": is_overlap,
+                "strong_overlap": strong_overlap,
                 "is_interrupting_prev": is_interrupting_prev,
                 "speaker_switch": speaker_switch,
                 "same_speaker": same_speaker,
                 "turn_index_norm": turn_index / max_length,
                 "prev_gap_abs": abs(gap_prev),
                 "short_response": 1.0 if has_previous and 0.0 <= gap_prev < self.short_gap_threshold else 0.0,
+                "immediate_response": 1.0 if has_previous and 0.0 <= gap_prev < self.immediate_gap_threshold else 0.0,
                 "long_pause": 1.0 if has_previous and gap_prev > self.long_gap_threshold else 0.0,
+                "previous_mean_gap": previous_mean_gap,
+                "window3_average_gap": window3_average_gap,
+                "window5_average_gap": window5_average_gap,
+                "window3_gap_variance": window3_gap_variance,
+                "window5_gap_variance": window5_gap_variance,
+                "relative_gap_to_speaker_mean": relative_gap_to_speaker_mean,
+                "silence_density_10s": silence_density_10s,
+                "interaction_density_10s": interaction_density_10s,
+                "rhythm_variance_window5": window5_gap_variance,
+                "rapid_exchange_state": rapid_exchange_state,
+                "conflict_like_state": conflict_like_state,
+                "hesitation_state": hesitation_state,
+                "speaker_switch_frequency_window3": speaker_switch_frequency_window3,
+                "speaker_switch_frequency_window5": speaker_switch_frequency_window5,
+                "overlap_frequency_window3": overlap_frequency_window3,
+                "overlap_frequency_window5": overlap_frequency_window5,
+                "consecutive_overlap_count": consecutive_overlap,
                 "speaker_prev_overlap_rate": speaker_prev_overlap_rate,
+                "speaker_prev_interruption_rate": speaker_prev_interruption_rate,
                 "speaker_prev_mean_gap": speaker_prev_mean_gap,
                 "speaker_prev_mean_duration": speaker_prev_mean_duration,
                 "speaker_prev_turn_count_norm": speaker_prev_turn_count_norm,
+                "speaker_dominance_time_so_far": history["duration_sum"] / max(total_time_so_far, self.eps),
+                "speaker_persistence_so_far": history["same_speaker_count"] / max(previous_turns, 1.0),
             }
             features.append(row_features)
 
             history["turn_count"] += 1.0
             history["overlap_count"] += is_overlap
+            history["interruption_count"] += is_interrupting_prev
             history["gap_sum"] += gap_prev
             history["duration_sum"] += duration
+            history["same_speaker_count"] += same_speaker
             speaker_history[speaker_id] = history
+            total_turns_so_far += 1.0
+            total_time_so_far += duration
             previous_row = row
+            previous_raw_rows.append(row_features)
         return features
 
 

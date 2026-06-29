@@ -4,6 +4,7 @@ import argparse
 import csv
 import os
 import random
+import sys
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional, Sequence
 
@@ -11,6 +12,10 @@ import numpy as np
 import torch
 import yaml
 from tqdm import tqdm
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from models.wavlm_tim import WavLMTIMSerModel, build_wavlm_tim_ser_model
 from scripts.evaluate_temporal_subsets import save_temporal_subset_metrics
@@ -40,6 +45,7 @@ from utils.iemocap_kaggle import (
 )
 from utils.temporal_features import (
     TEMPORAL_FEATURE_NAMES,
+    TEMPORAL_FEATURE_SETS,
     TemporalInputPolicy,
     TemporalInteractionFeatureBuilder,
     attach_temporal_features_to_dialogues,
@@ -202,7 +208,7 @@ def prepare_dialogues(config: Mapping[str, Any], device: torch.device, log_path:
     return dialogue_splits, splits
 
 
-def save_tim_predictions_csv(path: str | Path, rows: Sequence[Mapping[str, Any]]) -> None:
+def save_tim_predictions_csv(path: str | Path, rows: Sequence[Mapping[str, Any]], feature_names: Sequence[str]) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
@@ -211,7 +217,7 @@ def save_tim_predictions_csv(path: str | Path, rows: Sequence[Mapping[str, Any]]
         "speaker_id",
         "start_time",
         "end_time",
-        *TEMPORAL_FEATURE_NAMES,
+        *feature_names,
         "gold_label",
         "pred_label",
         *[f"prob_{label}" for label in LABEL_NAMES],
@@ -295,7 +301,7 @@ def run_dialogue_epoch(
                 "gold_label": ID2LABEL[int(batch_targets[index])],
                 "pred_label": ID2LABEL[int(pred_id)],
             }
-            for feature_name in TEMPORAL_FEATURE_NAMES:
+            for feature_name in temporal_builder.stats.feature_names:
                 prediction_row[feature_name] = float(row[feature_name])
             for label_idx, label_name in ID2LABEL.items():
                 prediction_row[f"prob_{label_name}"] = float(probabilities[index][label_idx])
@@ -445,8 +451,12 @@ def main() -> None:
         return
     if not bool(config["model"].get("use_temporal_features", False)):
         raise ValueError("TIM ablations require use_temporal_features=true to preserve the TIM architecture.")
-    if int(config["model"].get("temporal_feature_dim", 16)) != len(TEMPORAL_FEATURE_NAMES):
-        raise ValueError(f"temporal_feature_dim must be {len(TEMPORAL_FEATURE_NAMES)} for TIM.")
+    temporal_feature_set = str(config["model"].get("temporal_feature_set", "v1"))
+    if temporal_feature_set not in TEMPORAL_FEATURE_SETS:
+        raise ValueError(f"Unknown temporal_feature_set={temporal_feature_set!r}. Expected one of {sorted(TEMPORAL_FEATURE_SETS)}.")
+    expected_temporal_dim = len(TEMPORAL_FEATURE_SETS[temporal_feature_set])
+    if int(config["model"].get("temporal_feature_dim", expected_temporal_dim)) != expected_temporal_dim:
+        raise ValueError(f"temporal_feature_dim must be {expected_temporal_dim} for temporal_feature_set={temporal_feature_set!r}.")
     set_seed(int(config.get("seed", 42)))
     output_dir = Path(config["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -464,6 +474,10 @@ def main() -> None:
         short_gap_threshold=float(config["model"].get("short_gap_threshold", 0.3)),
         long_gap_threshold=float(config["model"].get("long_gap_threshold", 1.0)),
         overlap_threshold=float(config["model"].get("overlap_threshold", 0.05)),
+        feature_set=temporal_feature_set,
+        strong_overlap_ratio_threshold=float(config["model"].get("strong_overlap_ratio_threshold", 0.30)),
+        immediate_gap_threshold=float(config["model"].get("immediate_gap_threshold", 0.10)),
+        density_window_seconds=float(config["model"].get("density_window_seconds", 10.0)),
     )
     temporal_builder.fit(train_dialogues)
     temporal_builder.save_stats(output_dir / "temporal_feature_stats.json")
@@ -501,7 +515,13 @@ def main() -> None:
             f"unfreeze_last_n_layers={config['model'].get('unfreeze_last_n_layers', 0)}"
         ),
     )
-    append_log(log_path, f"temporal_feature_mode={config['model']['temporal_feature_mode']} dim={config['model']['temporal_feature_dim']}")
+    append_log(
+        log_path,
+        (
+            f"temporal_feature_mode={config['model']['temporal_feature_mode']} "
+            f"feature_set={temporal_feature_set} dim={config['model']['temporal_feature_dim']}"
+        ),
+    )
     append_log(
         log_path,
         "temporal_input_policy="
@@ -618,7 +638,7 @@ def main() -> None:
     }
     save_json(output_dir / "metrics.json", metrics_payload)
     predictions_path = output_dir / "predictions.csv"
-    save_tim_predictions_csv(predictions_path, test_output["prediction_rows"])
+    save_tim_predictions_csv(predictions_path, test_output["prediction_rows"], temporal_builder.stats.feature_names)
     save_confusion_matrix_csv(output_dir / "confusion_matrix.csv", test_metrics["confusion_matrix"], LABEL_NAMES)
     save_confusion_matrix_png(output_dir / "confusion_matrix.png", test_metrics["confusion_matrix"], LABEL_NAMES)
     save_temporal_subset_metrics(

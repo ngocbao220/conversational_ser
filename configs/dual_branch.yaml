@@ -5,12 +5,9 @@ seed: 42
 
 dataset:
   name: iemocap
-  iemocap_root: iemocap
+  iemocap_root: data/iemocap
   auto_download: true
   kaggle_dataset: sangayb/iemocap
-  meld_root: data/meld-dataset
-  meld_auto_download: true
-  meld_kaggle_dataset: zaber666/meld-dataset
   test_session: 5
   validation_ratio: 0.1
   sampling_rate: 16000

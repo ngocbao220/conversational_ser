@@ -949,7 +949,7 @@ Do not concatenate all temporal features directly. The statistical analysis supp
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Statistical study of temporal interaction cues for conversational SER.")
-    parser.add_argument("--iemocap-root", default="iemocap")
+    parser.add_argument("--iemocap-root", default="data/iemocap")
     parser.add_argument("--meld-root", default=None, help="Local MELD root. Defaults to data/meld-dataset.")
     parser.add_argument(
         "--meld-auto-download",

@@ -1,4 +1,4 @@
- from __future__ import annotations
+from __future__ import annotations
 
 import csv
 import json
@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = Path(__file__).resolve().parent
 
 METADATA_PATH = ROOT / "iemocap_export" / "metadata.csv"
-IEMOCAP_ROOT = ROOT / "iemocap"
+IEMOCAP_ROOT = ROOT / "data" / "iemocap"
 PREDICTION_CANDIDATES = {
     "baseline": (
         ROOT / "results" / "wavlm_no_mal_no_tim" / "predictions.csv",
