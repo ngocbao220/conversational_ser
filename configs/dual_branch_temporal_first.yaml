@@ -1,6 +1,6 @@
-run_name: dual_branch_3phase_fair_ablation_loso
-experiment_name: wavlm_dual_branch_tim_3phase_fair_ablation_loso
-output_dir: results/fair_ablation_loso/wavlm_dual_branch_3phase
+run_name: dual_branch_temporal_first_fair_ablation_loso
+experiment_name: wavlm_dual_branch_tim_temporal_first_fair_ablation_loso
+output_dir: results/ablation_model_loso/wavlm_dual_branch_temporal_first
 seed: 42
 
 dataset:
@@ -65,10 +65,10 @@ training:
   progress_bar: false
 
 training_stage:
-  mode: 3_phase
-  stage_1_train_dialogue_branch: true
+  mode: temporal_first_3_phase
+  stage_1_train_temporal_branch: true
   stage_1_epochs: 60
-  stage_2_freeze_dialogue_train_temporal: true
+  stage_2_train_dialogue_branch: true
   stage_2_epochs: 60
   stage_3_finetune_fusion: true
   stage_3_epochs: 30
@@ -79,6 +79,6 @@ analysis:
 wandb:
   use_wandb: true
   project: conversational-SER
-  run_name: dual_branch_3phase_fair_ablation_loso
+  run_name: dual_branch_temporal_first_fair_ablation_loso
   entity: null
   mode: online

@@ -78,12 +78,25 @@ def configure_phase_trainability(
     phase = str(phase_name)
     if phase == "end_to_end":
         set_requires_grad(model, True)
+    elif phase == "phase_1_temporal":
+        set_requires_grad(model.temporal_encoder, True)
+        set_requires_grad(model.temporal_branch, True)
+        set_requires_grad(model.classifier, True)
+        with torch.no_grad():
+            model.alpha.fill_(0.0)
+        model.alpha.requires_grad_(False)
+        model.beta.requires_grad_(True)
     elif phase == "phase_1_dialogue":
         set_requires_grad(model.dialogue_branch, True)
         set_requires_grad(model.classifier, True)
         model.alpha.requires_grad_(True)
         with torch.no_grad():
             model.beta.fill_(0.0)
+        model.beta.requires_grad_(False)
+    elif phase == "phase_2_dialogue":
+        set_requires_grad(model.dialogue_branch, True)
+        set_requires_grad(model.classifier, True)
+        model.alpha.requires_grad_(True)
         model.beta.requires_grad_(False)
     elif phase == "phase_2_temporal":
         set_requires_grad(model.temporal_encoder, True)
@@ -121,25 +134,43 @@ def staged_phase_plan(training_stage: Mapping[str, Any], default_max_epochs: int
     mode = str(training_stage.get("mode", "end_to_end"))
     if mode == "end_to_end":
         return [{"name": "end_to_end", "epochs": int(default_max_epochs), "enabled": True}]
-    if mode != "3_phase":
-        raise ValueError("training_stage.mode must be one of: end_to_end, 3_phase")
-    return [
-        {
-            "name": "phase_1_dialogue",
-            "epochs": int(training_stage.get("stage_1_epochs", default_max_epochs)),
-            "enabled": bool(training_stage.get("stage_1_train_dialogue_branch", True)),
-        },
-        {
-            "name": "phase_2_temporal",
-            "epochs": int(training_stage.get("stage_2_epochs", default_max_epochs)),
-            "enabled": bool(training_stage.get("stage_2_freeze_dialogue_train_temporal", True)),
-        },
-        {
-            "name": "phase_3_fusion",
-            "epochs": int(training_stage.get("stage_3_epochs", max(1, default_max_epochs // 2))),
-            "enabled": bool(training_stage.get("stage_3_finetune_fusion", True)),
-        },
-    ]
+    if mode == "3_phase":
+        return [
+            {
+                "name": "phase_1_dialogue",
+                "epochs": int(training_stage.get("stage_1_epochs", default_max_epochs)),
+                "enabled": bool(training_stage.get("stage_1_train_dialogue_branch", True)),
+            },
+            {
+                "name": "phase_2_temporal",
+                "epochs": int(training_stage.get("stage_2_epochs", default_max_epochs)),
+                "enabled": bool(training_stage.get("stage_2_freeze_dialogue_train_temporal", True)),
+            },
+            {
+                "name": "phase_3_fusion",
+                "epochs": int(training_stage.get("stage_3_epochs", max(1, default_max_epochs // 2))),
+                "enabled": bool(training_stage.get("stage_3_finetune_fusion", True)),
+            },
+        ]
+    if mode == "temporal_first_3_phase":
+        return [
+            {
+                "name": "phase_1_temporal",
+                "epochs": int(training_stage.get("stage_1_epochs", default_max_epochs)),
+                "enabled": bool(training_stage.get("stage_1_train_temporal_branch", True)),
+            },
+            {
+                "name": "phase_2_dialogue",
+                "epochs": int(training_stage.get("stage_2_epochs", default_max_epochs)),
+                "enabled": bool(training_stage.get("stage_2_train_dialogue_branch", True)),
+            },
+            {
+                "name": "phase_3_fusion",
+                "epochs": int(training_stage.get("stage_3_epochs", max(1, default_max_epochs // 2))),
+                "enabled": bool(training_stage.get("stage_3_finetune_fusion", True)),
+            },
+        ]
+    raise ValueError("training_stage.mode must be one of: end_to_end, 3_phase, temporal_first_3_phase")
 
 
 def save_dual_branch_predictions_csv(path: str | Path, rows: Sequence[Mapping[str, Any]]) -> None:
