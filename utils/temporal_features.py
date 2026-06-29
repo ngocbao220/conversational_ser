@@ -70,9 +70,25 @@ TIM_V2_RECOMMENDED_FEATURE_NAMES = [
     "consecutive_overlap_count",
 ]
 
+TIM_SELECTED_PRIMITIVE_FEATURE_NAMES = [
+    "previous_mean_gap",
+    "silence_density_10s",
+    "speaker_prev_mean_duration",
+    "window5_average_gap",
+    "speaker_dominance_time_so_far",
+    "overlap_frequency_window5",
+    "speaker_prev_overlap_rate",
+    "speaker_prev_mean_gap",
+    "speaker_switch_frequency_window5",
+    "window5_gap_variance",
+    "conflict_like_state",
+    "window3_average_gap",
+]
+
 TEMPORAL_FEATURE_SETS = {
     "v1": TEMPORAL_FEATURE_NAMES,
     "recommended_v2": TIM_V2_RECOMMENDED_FEATURE_NAMES,
+    "selected_primitives": TIM_SELECTED_PRIMITIVE_FEATURE_NAMES,
 }
 
 BINARY_TEMPORAL_FEATURES = {

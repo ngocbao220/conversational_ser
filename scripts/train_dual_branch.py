@@ -4,12 +4,17 @@ import argparse
 import csv
 import os
 import random
+import sys
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional, Sequence
 
 import numpy as np
 import torch
 from tqdm import tqdm
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from models.wavlm_dual_branch_tim import WavLMDualBranchTIMSerModel, build_wavlm_dual_branch_tim_ser_model
 from scripts.train_wavlm_tim import (
@@ -24,7 +29,7 @@ from scripts.train_wavlm_tim import (
     set_seed,
     trainable_parameters,
 )
-from utils.dialogue_embeddings import DialogueEmbedding
+from utils.dialogue_embeddings import DialogueEmbedding, TrainableWavLMMeanExtractor
 from utils.experiment_metrics import (
     compute_ser_metrics,
     save_confusion_matrix_csv,
@@ -33,7 +38,7 @@ from utils.experiment_metrics import (
 )
 from utils.iemocap_kaggle import ID2LABEL, LABEL_NAMES, add_dataset_override_args, apply_dataset_overrides
 from utils.temporal_features import (
-    TEMPORAL_FEATURE_NAMES,
+    TEMPORAL_FEATURE_SETS,
     TemporalInputPolicy,
     TemporalInteractionFeatureBuilder,
     attach_temporal_features_to_dialogues,
@@ -116,8 +121,9 @@ def make_optimizer_and_scheduler(
     config: Mapping[str, Any],
     train_dialogue_count: int,
     max_epochs: int,
+    wavlm_extractor: TrainableWavLMMeanExtractor | None = None,
 ) -> tuple[torch.optim.Optimizer, Any]:
-    params = trainable_parameters(model)
+    params = trainable_parameters(model, wavlm_extractor)
     if not params:
         raise RuntimeError("No trainable parameters for the current phase.")
     optimizer = torch.optim.AdamW(
@@ -278,6 +284,8 @@ def run_dual_branch_dialogue_epoch(
     temporal_builder: TemporalInteractionFeatureBuilder,
     temporal_policy: TemporalInputPolicy,
     device: torch.device,
+    wavlm_extractor: TrainableWavLMMeanExtractor | None = None,
+    wavlm_batch_size: int = 4,
     optimizer: Optional[torch.optim.Optimizer] = None,
     scheduler: Optional[Any] = None,
     class_weights: Optional[torch.Tensor] = None,
@@ -287,6 +295,8 @@ def run_dual_branch_dialogue_epoch(
 ) -> Dict[str, Any]:
     is_train = optimizer is not None
     model.train(is_train)
+    if wavlm_extractor is not None:
+        wavlm_extractor.train(is_train)
     dialogue_order = list(dialogues)
     if is_train:
         random.shuffle(dialogue_order)
@@ -298,7 +308,11 @@ def run_dual_branch_dialogue_epoch(
     residual_rows: list[Dict[str, Any]] = []
     iterator = tqdm(dialogue_order, desc=description, disable=not progress, dynamic_ncols=True)
     for dialogue in iterator:
-        embeddings = dialogue.embeddings.to(device)
+        embeddings = (
+            wavlm_extractor.encode_rows(dialogue.rows, device=device, batch_size=wavlm_batch_size)
+            if wavlm_extractor is not None
+            else dialogue.embeddings.to(device)
+        )
         labels = dialogue.labels.to(device)
         temporal_features = temporal_policy.apply(
             temporal_builder.transform_dialogue(dialogue), dialogue.dialogue_id
@@ -310,7 +324,7 @@ def run_dual_branch_dialogue_epoch(
             loss = torch.nn.functional.cross_entropy(logits, labels, weight=class_weights)
             if is_train:
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(trainable_parameters(model), max_grad_norm)
+                torch.nn.utils.clip_grad_norm_(trainable_parameters(model, wavlm_extractor), max_grad_norm)
                 optimizer.step()
                 if scheduler is not None:
                     scheduler.step()
@@ -366,12 +380,20 @@ def run_dual_branch_dialogue_epoch(
     }
 
 
-def save_checkpoint(path: Path, model: WavLMDualBranchTIMSerModel, config: Mapping[str, Any], epoch: int, metrics: Mapping[str, Any]) -> None:
+def save_checkpoint(
+    path: Path,
+    model: WavLMDualBranchTIMSerModel,
+    config: Mapping[str, Any],
+    epoch: int,
+    metrics: Mapping[str, Any],
+    wavlm_extractor: TrainableWavLMMeanExtractor | None = None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
             "experiment_name": config["experiment_name"],
             "model_state_dict": model.state_dict(),
+            "wavlm_extractor_state_dict": wavlm_extractor.state_dict() if wavlm_extractor is not None else None,
             "config": dict(config),
             "epoch": epoch,
             "metrics": dict(metrics),
@@ -485,6 +507,7 @@ def train_model_with_phase_plan(
     log_path: Path,
     wandb_run: Any,
     class_weights: Optional[torch.Tensor],
+    wavlm_extractor: TrainableWavLMMeanExtractor | None = None,
 ) -> tuple[int, float, Dict[str, Any], list[Dict[str, Any]]]:
     training_stage = config.get("training_stage", {"mode": "end_to_end"})
     max_epochs = int(config["training"].get("max_epochs", 10))
@@ -509,6 +532,7 @@ def train_model_with_phase_plan(
             config,
             train_dialogue_count=len(train_dialogues),
             max_epochs=phase_epochs,
+            wavlm_extractor=wavlm_extractor,
         )
         counts = parameter_counts(model)
         phase_best_ua = -1.0
@@ -531,6 +555,8 @@ def train_model_with_phase_plan(
                 temporal_builder,
                 temporal_policy,
                 device,
+                wavlm_extractor=wavlm_extractor,
+                wavlm_batch_size=int(config["training"].get("wavlm_batch_size", 4)),
                 optimizer=optimizer,
                 scheduler=scheduler,
                 class_weights=class_weights,
@@ -544,6 +570,8 @@ def train_model_with_phase_plan(
                 temporal_builder,
                 temporal_policy,
                 device,
+                wavlm_extractor=wavlm_extractor,
+                wavlm_batch_size=int(config["training"].get("eval_wavlm_batch_size", config["training"].get("wavlm_batch_size", 4))),
                 progress=progress,
                 description=f"{config['experiment_name']} {phase_name} {phase_epoch}/{phase_epochs} validation",
             )
@@ -583,18 +611,18 @@ def train_model_with_phase_plan(
                     step=global_epoch,
                 )
 
-            save_checkpoint(output_dir / "last.pth", model, config, global_epoch, val_metrics)
-            save_checkpoint(output_dir / f"{phase_name}_last.pth", model, config, global_epoch, val_metrics)
+            save_checkpoint(output_dir / "last.pth", model, config, global_epoch, val_metrics, wavlm_extractor=wavlm_extractor)
+            save_checkpoint(output_dir / f"{phase_name}_last.pth", model, config, global_epoch, val_metrics, wavlm_extractor=wavlm_extractor)
             if float(val_metrics["UA"]) > best_ua:
                 best_ua = float(val_metrics["UA"])
                 best_epoch = global_epoch
                 best_validation_metrics = val_metrics
-                save_checkpoint(output_dir / "best.pth", model, config, global_epoch, val_metrics)
+                save_checkpoint(output_dir / "best.pth", model, config, global_epoch, val_metrics, wavlm_extractor=wavlm_extractor)
             if float(val_metrics["UA"]) > phase_best_ua:
                 phase_best_ua = float(val_metrics["UA"])
                 phase_best_epoch = global_epoch
                 phase_best_metrics = val_metrics
-                save_checkpoint(phase_best_path, model, config, global_epoch, val_metrics)
+                save_checkpoint(phase_best_path, model, config, global_epoch, val_metrics, wavlm_extractor=wavlm_extractor)
         phase_summary = {
             "phase": phase_name,
             "epochs": phase_epochs,
@@ -623,15 +651,20 @@ def evaluate_checkpoint_on_test(
     output_dir: Path,
     phase_name: str,
     progress: bool,
+    wavlm_extractor: TrainableWavLMMeanExtractor | None = None,
 ) -> Dict[str, Any]:
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
+    if wavlm_extractor is not None and checkpoint.get("wavlm_extractor_state_dict") is not None:
+        wavlm_extractor.load_state_dict(checkpoint["wavlm_extractor_state_dict"])
     test_output = run_dual_branch_dialogue_epoch(
         model,
         test_dialogues,
         temporal_builder,
         temporal_policy,
         device,
+        wavlm_extractor=wavlm_extractor,
+        wavlm_batch_size=int(config["training"].get("eval_wavlm_batch_size", config["training"].get("wavlm_batch_size", 4))),
         progress=progress,
         description=f"{config['experiment_name']} {phase_name} test",
     )
@@ -701,6 +734,12 @@ def main() -> None:
         summary_path = run_cross_session("scripts.train_dual_branch", args.config)
         print(f"cross_session_summary={summary_path}")
         return
+    temporal_feature_set = str(config["model"].get("temporal_feature_set", "v1"))
+    if temporal_feature_set not in TEMPORAL_FEATURE_SETS:
+        raise ValueError(f"Unknown temporal_feature_set={temporal_feature_set!r}. Expected one of {sorted(TEMPORAL_FEATURE_SETS)}.")
+    expected_temporal_dim = len(TEMPORAL_FEATURE_SETS[temporal_feature_set])
+    if int(config["model"].get("temporal_feature_dim", expected_temporal_dim)) != expected_temporal_dim:
+        raise ValueError(f"temporal_feature_dim must be {expected_temporal_dim} for temporal_feature_set={temporal_feature_set!r}.")
 
     set_seed(int(config.get("seed", 42)))
     output_dir = Path(config["output_dir"])
@@ -719,6 +758,10 @@ def main() -> None:
         short_gap_threshold=float(config["model"].get("short_gap_threshold", 0.3)),
         long_gap_threshold=float(config["model"].get("long_gap_threshold", 1.0)),
         overlap_threshold=float(config["model"].get("overlap_threshold", 0.05)),
+        feature_set=temporal_feature_set,
+        strong_overlap_ratio_threshold=float(config["model"].get("strong_overlap_ratio_threshold", 0.30)),
+        immediate_gap_threshold=float(config["model"].get("immediate_gap_threshold", 0.10)),
+        density_window_seconds=float(config["model"].get("density_window_seconds", 10.0)),
     )
     temporal_builder.fit(train_dialogues)
     temporal_builder.save_stats(output_dir / "temporal_feature_stats.json")
@@ -728,8 +771,18 @@ def main() -> None:
 
     embedding_dim = int(train_dialogues[0].embeddings.shape[-1])
     model = build_wavlm_dual_branch_tim_ser_model(config["model"], embedding_dim=embedding_dim).to(device)
+    wavlm_extractor = None
+    if not bool(config.get("precompute", {}).get("enabled", True)):
+        wavlm_extractor = TrainableWavLMMeanExtractor(
+            wavlm_model_name=str(config["model"]["wavlm_model_name"]),
+            sampling_rate=int(config["dataset"].get("sampling_rate", 16000)),
+            max_duration_seconds=config["dataset"].get("max_duration_seconds"),
+            freeze_wavlm=bool(config["model"].get("freeze_wavlm", True)),
+            unfreeze_last_n_layers=int(config["model"].get("unfreeze_last_n_layers", 0)),
+        ).to(device)
     configure_trainable_gates(model, config["model"])
     counts = parameter_counts(model)
+    wavlm_counts = parameter_counts(wavlm_extractor) if wavlm_extractor is not None else {"total": 0, "trainable": 0, "frozen": 0}
     append_log(log_path, f"experiment={config['experiment_name']}")
     append_log(log_path, f"run_name={config.get('run_name', '')}")
     append_log(
@@ -740,8 +793,19 @@ def main() -> None:
             f"test={len(utterance_splits['test'])}/{len(test_dialogues)}dialogues"
         ),
     )
-    append_log(log_path, f"embedding_dim={embedding_dim} dual_branch=true precomputed_wavlm={bool(config['precompute'].get('enabled', True))}")
+    append_log(
+        log_path,
+        (
+            f"embedding_dim={embedding_dim} dual_branch=true "
+            f"precomputed_wavlm={bool(config['precompute'].get('enabled', True))} "
+            f"end_to_end_wavlm={wavlm_extractor is not None} "
+            f"unfreeze_last_n_layers={config['model'].get('unfreeze_last_n_layers', 0)}"
+        ),
+    )
+    append_log(log_path, f"temporal_feature_set={temporal_feature_set} dim={config['model']['temporal_feature_dim']}")
     append_log(log_path, f"parameters total={counts['total']:,} trainable={counts['trainable']:,}")
+    if wavlm_extractor is not None:
+        append_log(log_path, f"parameters wavlm total={wavlm_counts['total']:,} trainable={wavlm_counts['trainable']:,}")
     append_log(
         log_path,
         "temporal_input_policy="
@@ -770,6 +834,7 @@ def main() -> None:
         log_path=log_path,
         wandb_run=wandb_run,
         class_weights=class_weights,
+        wavlm_extractor=wavlm_extractor,
     )
 
     progress = bool(config["training"].get("progress_bar", True))
@@ -790,6 +855,7 @@ def main() -> None:
             output_dir=output_dir,
             phase_name=str(phase_summary["phase"]),
             progress=progress,
+            wavlm_extractor=wavlm_extractor,
         )
         phase_test_metrics.append(metrics)
         append_log(
@@ -806,12 +872,16 @@ def main() -> None:
 
     checkpoint = torch.load(output_dir / "best.pth", map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
+    if wavlm_extractor is not None and checkpoint.get("wavlm_extractor_state_dict") is not None:
+        wavlm_extractor.load_state_dict(checkpoint["wavlm_extractor_state_dict"])
     test_output = run_dual_branch_dialogue_epoch(
         model,
         test_dialogues,
         temporal_builder,
         temporal_policy,
         device,
+        wavlm_extractor=wavlm_extractor,
+        wavlm_batch_size=int(config["training"].get("eval_wavlm_batch_size", config["training"].get("wavlm_batch_size", 4))),
         progress=progress,
         description=f"{config['experiment_name']} test",
     )

@@ -13,6 +13,7 @@ class WavLMDualBranchTIMConfig:
     num_labels: int = 4
     temporal_feature_dim: int = 16
     temporal_emb_dim: int = 64
+    temporal_hidden_dim: int = 64
     memory_dim: int = 128
     dropout: float = 0.2
     alpha_init: float = 0.0
@@ -20,14 +21,21 @@ class WavLMDualBranchTIMConfig:
 
 
 class TemporalInteractionEncoder(nn.Module):
-    def __init__(self, input_dim: int = 16, temporal_emb_dim: int = 64, dropout: float = 0.2) -> None:
+    def __init__(
+        self,
+        input_dim: int = 16,
+        temporal_emb_dim: int = 64,
+        hidden_dim: int = 64,
+        dropout: float = 0.2,
+    ) -> None:
         super().__init__()
+        hidden_dim = int(hidden_dim)
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 64),
-            nn.LayerNorm(64),
+            nn.Linear(input_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim),
             nn.GELU(),
             nn.Dropout(dropout),
-            nn.Linear(64, temporal_emb_dim),
+            nn.Linear(hidden_dim, temporal_emb_dim),
             nn.LayerNorm(temporal_emb_dim),
             nn.GELU(),
         )
@@ -97,6 +105,7 @@ class WavLMDualBranchTIMSerModel(nn.Module):
         self.temporal_encoder = TemporalInteractionEncoder(
             input_dim=config.temporal_feature_dim,
             temporal_emb_dim=config.temporal_emb_dim,
+            hidden_dim=config.temporal_hidden_dim,
             dropout=config.dropout,
         )
         self.dialogue_branch = DialogueMemoryBranch(
@@ -179,6 +188,7 @@ def build_wavlm_dual_branch_tim_ser_model(model_cfg: dict, embedding_dim: int) -
         num_labels=int(model_cfg.get("num_labels", 4)),
         temporal_feature_dim=int(model_cfg.get("temporal_feature_dim", 16)),
         temporal_emb_dim=int(model_cfg.get("temporal_emb_dim", 64)),
+        temporal_hidden_dim=int(model_cfg.get("temporal_hidden_dim", 64)),
         memory_dim=int(model_cfg.get("memory_dim", 128)),
         dropout=float(model_cfg.get("dropout", 0.2)),
         alpha_init=float(model_cfg.get("alpha_init", 0.0)),
