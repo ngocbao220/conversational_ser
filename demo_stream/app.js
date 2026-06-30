@@ -29,6 +29,12 @@ const colorVars = {
   sad: "var(--sad)",
 };
 
+const modelColors = {
+  baseline: "#64748b",
+  mal: "#d97706",
+  tim: "#0f766e",
+};
+
 const nodes = {
   utteranceCount: document.querySelector("#utteranceCount"),
   dialogueCount: document.querySelector("#dialogueCount"),
@@ -111,6 +117,15 @@ nodes.prevTurnButton.addEventListener("click", () => {
 
 nodes.nextTurnButton.addEventListener("click", () => {
   stepDialogue(1);
+});
+
+nodes.streamList.addEventListener("click", (event) => {
+  const interactive = event.target.closest("button, audio, input, select, a, label");
+  if (interactive) return;
+
+  const utteranceNode = event.target.closest(".utterance[data-utterance-id]");
+  if (!utteranceNode) return;
+  selectUtteranceForPlayback(utteranceNode.dataset.utteranceId);
 });
 
 function renderControls() {
@@ -346,17 +361,20 @@ function renderUtterance(item) {
   const proofClass = isTimFix(item) ? " tim-proof" : "";
 
   return `
-    <article class="utterance ${labelClass}${proofClass}" id="turn-${escapeAttribute(item.utterance_id)}">
-      <div class="speaker">
-        <strong>${escapeHtml(item.speaker_id || "speaker")}</strong>
-        <span>${escapeHtml(item.utterance_id)}</span>
-        <span>${formatTurnMeta(item)}</span>
+    <article class="utterance ${labelClass}${proofClass}" id="turn-${escapeAttribute(item.utterance_id)}" data-utterance-id="${escapeAttribute(item.utterance_id)}">
+      <div class="utterance-main">
+        <div class="speaker">
+          <strong>${escapeHtml(item.speaker_id || "speaker")}</strong>
+          <span>${escapeHtml(item.utterance_id)}</span>
+          <span>${formatTurnMeta(item)}</span>
+        </div>
+        <div class="transcript">
+          <p>${escapeHtml(item.transcript || "(no transcript)")}</p>
+          ${audio}
+        </div>
       </div>
-      <div class="transcript">
-        <p>${escapeHtml(item.transcript || "(no transcript)")}</p>
-        ${audio}
-      </div>
-      ${prediction ? renderPrediction(item, prediction) : renderMissingPrediction(item)}
+      ${renderPredictionPanel(item, prediction)}
+      ${renderSoftmaxHistogram(item)}
     </article>
   `;
 }
@@ -434,6 +452,43 @@ function stepDialogue(step) {
   const currentIndex = currentTimelineIndex();
   const nextIndex = clamp(currentIndex + step, 0, state.player.playlist.length - 1);
   jumpToIndex(nextIndex);
+}
+
+function selectUtteranceForPlayback(utteranceId) {
+  const item = state.data.utterances.find((row) => row.utterance_id === utteranceId);
+  if (!item || item.start_time === null || item.end_time === null || !item.audio_path) {
+    renderPlayer("This utterance has no timestamped audio.");
+    return;
+  }
+
+  const wasPlaying = state.player.playing;
+  if (state.dialogue !== item.dialogue_id) {
+    clearTimelinePlayback();
+    state.player.playing = false;
+    state.dialogue = item.dialogue_id;
+    renderDialogueOptions();
+    render();
+  } else if (wasPlaying) {
+    clearTimelinePlayback();
+    state.player.playing = false;
+  }
+
+  syncPlayerPlaylist();
+  const index = state.player.playlist.findIndex((row) => row.utterance_id === utteranceId);
+  if (index < 0) {
+    renderPlayer("This utterance is outside the active playback playlist.");
+    return;
+  }
+
+  const selected = state.player.playlist[index];
+  state.player.index = index;
+  state.player.offset = Math.max(0, Number(selected.start_time) - state.player.baseTime);
+  highlightActiveTurn(selected.utterance_id);
+  renderPlayer(`Ready from ${selected.utterance_id}. Press Play to continue from this turn.`);
+
+  if (wasPlaying) {
+    startTimeline(state.player.offset);
+  }
 }
 
 function startTimeline(offset) {
@@ -618,20 +673,101 @@ function clearActiveTurn() {
   });
 }
 
-function renderPrediction(item, prediction) {
-  const isMatch = prediction.label === item.gold_label;
-  const confidence = Math.round(prediction.confidence * 100);
+function renderPredictionPanel(item, activePrediction) {
   return `
     <div class="prediction">
-      <div class="label-row">
-        <span class="badge ${prediction.label}">${prediction.label}</span>
-        <span>${confidence}%</span>
-        <span class="${isMatch ? "match" : "mismatch"}">${isMatch ? "correct" : `gold: ${escapeHtml(item.gold_label)}`}</span>
-      </div>
-      <div class="prob-list">
-        ${state.data.labels.map((label) => renderProbability(label, prediction.probabilities[label])).join("")}
-      </div>
+      ${renderEmotionSummary(item)}
+      ${activePrediction ? "" : renderMissingPrediction(item)}
       ${renderModelComparison(item)}
+    </div>
+  `;
+}
+
+function renderEmotionSummary(item) {
+  const raw = item.raw_label && item.raw_emotion && item.raw_label !== item.raw_emotion
+    ? `${item.raw_label} -> ${item.raw_emotion}`
+    : item.raw_emotion || item.raw_label || "unknown";
+  return `
+    <div class="emotion-summary">
+      <span class="emotion-token">
+        <small>raw</small>
+        <strong>${escapeHtml(raw)}</strong>
+      </span>
+      <span class="emotion-token">
+        <small>ground truth</small>
+        <strong><span class="badge small ${item.gold_label || "missing"}">${escapeHtml(item.gold_label || "unknown")}</span></strong>
+      </span>
+      ${renderModelPredictionTokens(item)}
+    </div>
+  `;
+}
+
+function renderModelPredictionTokens(item) {
+  return state.data.models
+    .map((model) => {
+      const prediction = item.predictions[model.id];
+      if (!prediction) {
+        return `
+          <span class="emotion-token model-token missing-model">
+            <small>${escapeHtml(model.name)}</small>
+            <strong>missing</strong>
+          </span>
+        `;
+      }
+      const correct = prediction.label === item.gold_label;
+      const confidence = Math.round((prediction.confidence || 0) * 100);
+      return `
+        <span class="emotion-token model-token ${correct ? "correct" : "wrong"}">
+          <small>${escapeHtml(model.name)}</small>
+          <strong>
+            <span class="model-dot" style="background:${modelColors[model.id] || "#475569"}"></span>
+            ${escapeHtml(prediction.label)}
+            <em>${confidence}%</em>
+          </strong>
+        </span>
+      `;
+    })
+    .join("");
+}
+
+function renderSoftmaxHistogram(item) {
+  const hasPrediction = state.data.models.some((model) => item.predictions[model.id]);
+  if (!hasPrediction) return "";
+  return `
+    <div class="softmax-histogram" aria-label="Softmax probabilities by model">
+      <div class="histogram-head">
+        <span>Model softmax comparison</span>
+        <span>${state.data.models.map((model) => renderModelLegend(model)).join("")}</span>
+      </div>
+      ${state.data.labels.map((label) => renderSoftmaxLabelRow(item, label)).join("")}
+    </div>
+  `;
+}
+
+function renderModelLegend(model) {
+  return `<span class="legend-item"><span class="model-dot" style="background:${modelColors[model.id] || "#475569"}"></span>${escapeHtml(model.id)}</span>`;
+}
+
+function renderSoftmaxLabelRow(item, label) {
+  return `
+    <div class="histogram-row">
+      <span class="histogram-label ${label}">${label}</span>
+      <div class="histogram-bars">
+        ${state.data.models.map((model) => renderModelProbabilityBar(item, model, label)).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderModelProbabilityBar(item, model, label) {
+  const prediction = item.predictions[model.id];
+  const value = prediction?.probabilities?.[label] || 0;
+  const percentage = Math.round(value * 100);
+  const activeClass = prediction?.label === label ? " predicted" : "";
+  return `
+    <div class="model-prob${activeClass}" title="${escapeAttribute(model.name)} ${label}: ${percentage}%">
+      <span class="model-prob-fill" style="width:${percentage}%; background:${modelColors[model.id] || "#475569"}"></span>
+      <span class="model-prob-text">${escapeHtml(model.id)} ${percentage}%</span>
     </div>
   `;
 }
@@ -673,7 +809,7 @@ function pairedOutcomeText(outcome) {
 
 function renderMissingPrediction(item) {
   return `
-    <div class="prediction muted-prediction">
+    <div class="muted-prediction">
       <div class="label-row">
         <span class="badge missing">no prediction</span>
         <span>gold: ${escapeHtml(item.gold_label || "unknown")}</span>

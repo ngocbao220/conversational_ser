@@ -175,6 +175,11 @@ def canonical_metadata_label(row: dict[str, str]) -> str:
     return RAW_LABEL_MAP.get(raw_label) or METADATA_LABEL_MAP.get(raw_label, "")
 
 
+def raw_emotion_label(row: dict[str, str]) -> str:
+    raw_label = str(row.get("original_label", "")).strip().lower()
+    return RAW_LABEL_MAP.get(raw_label, raw_label)
+
+
 def resolve_iemocap_audio_path(utterance_id: str, metadata_path: str = "") -> str:
     dialogue_id = "_".join(str(utterance_id).split("_")[:-1])
     session_match = re.match(r"Ses(?P<session>\d{2})", str(utterance_id))
@@ -330,6 +335,8 @@ def main() -> None:
             "duration": round(as_float(meta.get("duration") or first_pred.get("duration")), 3),
             "transcript": (str(transcript_row.get("transcript") or meta.get("transcript") or "")).strip(),
             "audio_path": resolve_iemocap_audio_path(utterance_id, meta.get("audio_path", "")),
+            "raw_emotion": raw_emotion_label(meta),
+            "raw_label": meta.get("original_label", ""),
             "gold_label": gold_label,
             "predictions": model_predictions,
             "comparison": comparison,

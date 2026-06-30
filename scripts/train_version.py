@@ -17,7 +17,7 @@ from utils.versioning import SETTING_REGISTRY, VERSION_REGISTRY, resolve_version
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train configured SER model versions with fair setting presets.")
-    parser.add_argument("--version", default=None, help="Version id, e.g. 1, 2.1, 2.2.1, 2.2.2, 3.1, 3.2.")
+    parser.add_argument("--version", default=None, help="Version id, e.g. baseline, mal, 1, 2.1, 2.2.1, 2.2.2, 3.1, 3.2.")
     parser.add_argument("--setting", default="A", choices=sorted(SETTING_REGISTRY), help="Training setting preset.")
     parser.add_argument("--all", action="store_true", help="Run all registered versions for the selected setting.")
     parser.add_argument("--seeds", nargs="+", type=int, default=[42], help="One or more seeds.")

@@ -16,3 +16,5 @@ torchcodec>=0.2.0
 tqdm>=4.66.0
 transformers>=4.40.0,<5.0.0
 wandb>=0.17.0
+seaborn
+tabulate

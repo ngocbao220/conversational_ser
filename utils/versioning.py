@@ -9,6 +9,72 @@ import yaml
 
 
 VERSION_REGISTRY: dict[str, dict[str, Any]] = {
+    "baseline": {
+        "name": "baseline_wavlm",
+        "trainer_module": "scripts.train_wavlm_baseline",
+        "experiment_name": "baseline_wavlm",
+        "model_remove_keys": [
+            "use_mal_memory",
+            "use_temporal_features",
+            "temporal_feature_mode",
+            "temporal_input_mode",
+            "disabled_temporal_feature_groups",
+            "temporal_shuffle_seed",
+            "residual_gate_init",
+            "alpha_init",
+            "beta_init",
+            "fix_alpha_zero",
+            "fix_beta_zero",
+            "immediate_gap_threshold",
+            "short_gap_threshold",
+            "long_gap_threshold",
+            "overlap_threshold",
+            "strong_overlap_ratio_threshold",
+            "density_window_seconds",
+            "memory_dim",
+            "temporal_emb_dim",
+        ],
+        "config_overrides": {
+            "model": {
+                "pooling": "mean",
+            },
+        },
+        "model_overrides": {},
+        "training_stage": None,
+    },
+    "mal": {
+        "name": "mal_wavlm",
+        "trainer_module": "scripts.train_wavlm_mal",
+        "experiment_name": "mal_wavlm",
+        "model_remove_keys": [
+            "use_mal_memory",
+            "temporal_emb_dim",
+            "temporal_input_mode",
+            "disabled_temporal_feature_groups",
+            "temporal_shuffle_seed",
+            "residual_gate_init",
+            "alpha_init",
+            "beta_init",
+            "fix_alpha_zero",
+            "fix_beta_zero",
+            "immediate_gap_threshold",
+            "short_gap_threshold",
+            "long_gap_threshold",
+            "overlap_threshold",
+            "strong_overlap_ratio_threshold",
+            "density_window_seconds",
+        ],
+        "config_overrides": {
+            "model": {
+                "use_temporal_features": False,
+                "temporal_feature_mode": "zero",
+                "temporal_input_mode": "zero",
+                "temporal_feature_dim": 16,
+            },
+        },
+        "model_overrides": {},
+        "training_stage": None,
+    },
     "1": {
         "name": "v1_tim_concat",
         "trainer_module": "scripts.train_wavlm_tim",
@@ -173,6 +239,15 @@ def deep_update(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, An
     return result
 
 
+def remove_nested_keys(config: dict[str, Any], keys_by_section: dict[str, list[str]]) -> None:
+    for section, keys in keys_by_section.items():
+        section_obj = config.get(section)
+        if not isinstance(section_obj, dict):
+            continue
+        for key in keys:
+            section_obj.pop(key, None)
+
+
 def base_config() -> dict[str, Any]:
     return {
         "seed": 42,
@@ -255,7 +330,9 @@ def resolve_version_config(
     config = deep_update(config, {"model": setting_spec["model"]})
     config = deep_update(config, {"precompute": setting_spec["precompute"]})
     config = deep_update(config, {"training": setting_spec["training"]})
+    config = deep_update(config, version_spec.get("config_overrides", {}))
     config = deep_update(config, {"model": version_spec["model_overrides"]})
+    remove_nested_keys(config, {"model": version_spec.get("model_remove_keys", [])})
     config["version"] = version
     config["setting"] = setting
     config["seed"] = int(seed)
