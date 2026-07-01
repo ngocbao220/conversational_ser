@@ -12,21 +12,27 @@ OUT_DIR = Path(__file__).resolve().parent
 
 METADATA_PATH = ROOT / "iemocap_export" / "metadata.csv"
 IEMOCAP_ROOT = ROOT / "data" / "iemocap"
+
 PREDICTION_CANDIDATES = {
     "baseline": (
-        ROOT / "results" / "wavlm_no_mal_no_tim" / "predictions.csv",
-        ROOT / "results" / "wavlm_baseline_no_mal_no_tim" / "predictions.csv",
-        ROOT / "outputs" / "hf_checkpoints" / "wavlm_baseline_no_mal_no_tim" / "predictions.csv",
+        ROOT / "results" / "versioned_loso" / "baseline_wavlm" / "cross_session" / "run_20260630_091825" / "test_Ses05" / "predictions.csv"
     ),
     "mal": (
-        ROOT / "results" / "wavlm_mal_no_tim" / "predictions.csv",
-        ROOT / "outputs" / "hf_checkpoints" / "wavlm_mal_no_tim" / "predictions.csv",
+        ROOT / "results" / "versioned_loso" / "mal_wavlm" / "cross_session" / "run_20260630_092932" / "test_Ses05" / "predictions.csv"
     ),
     "tim": (
-        ROOT / "results" / "wavlm_tim" / "predictions.csv",
-        ROOT / "outputs" / "hf_checkpoints" / "wavlm_tim" / "predictions.csv",
+        ROOT / "results" / "versioned_loso" / "v1_tim_concat" / "cross_session" / "run_20260629_165854" / "test_Ses05" / "predictions.csv"
     ),
+    
+    "cim": ROOT / "results" / "cim_loso" / "branch_concat_interaction4" / "cross_session" / "run_20260701_045803" / "test_Ses05" / "predictions.csv",
 }
+MODEL_DISPLAY_NAMES = {
+    "baseline": "WavLM baseline",
+    "mal": "WavLM + MAL",
+    "tim": "WavLM + TIM",
+    "cim": "WavLM + CIM",
+}
+MODEL_ORDER = ("tim", "cim", "mal", "baseline")
 LABELS = ("angry", "happy", "neutral", "sad")
 TARGET_SESSIONS = {"Ses05"}
 METADATA_LABEL_MAP = {
@@ -58,6 +64,17 @@ RAW_LABEL_MAP = {
     "neu": "neutral",
     "sad": "sad",
     "fea": "sad",
+}
+RAW_LABEL_FULL_NAMES = {
+    "ang": "angry",
+    "fru": "frustrated",
+    "dis": "disgusted",
+    "hap": "happy",
+    "exc": "excited",
+    "sur": "surprised",
+    "neu": "neutral",
+    "sad": "sad",
+    "fea": "fearful",
 }
 
 
@@ -131,6 +148,10 @@ def build_metadata_rows_from_iemocap(session_ids: set[str]) -> list[dict[str, st
 def resolve_prediction_files() -> dict[str, Path]:
     resolved = {}
     for model_name, candidates in PREDICTION_CANDIDATES.items():
+        if isinstance(candidates, (str, Path)):
+            candidates = (Path(candidates),)
+        else:
+            candidates = tuple(Path(candidate) for candidate in candidates)
         path = next((candidate for candidate in candidates if candidate.exists()), None)
         if path is not None:
             resolved[model_name] = path
@@ -178,6 +199,11 @@ def canonical_metadata_label(row: dict[str, str]) -> str:
 def raw_emotion_label(row: dict[str, str]) -> str:
     raw_label = str(row.get("original_label", "")).strip().lower()
     return RAW_LABEL_MAP.get(raw_label, raw_label)
+
+
+def raw_emotion_full_name(row: dict[str, str]) -> str:
+    raw_label = str(row.get("original_label", "")).strip().lower()
+    return RAW_LABEL_FULL_NAMES.get(raw_label, raw_label)
 
 
 def resolve_iemocap_audio_path(utterance_id: str, metadata_path: str = "") -> str:
@@ -266,6 +292,85 @@ def compare_predictions(model_predictions: dict[str, dict[str, object]], gold_la
     }
 
 
+def add_interaction_features(items: list[dict[str, object]]) -> None:
+    by_dialogue: dict[str, list[dict[str, object]]] = defaultdict(list)
+    for item in items:
+        by_dialogue[str(item["dialogue_id"])].append(item)
+
+    for dialogue_items in by_dialogue.values():
+        dialogue_items.sort(
+            key=lambda row: (
+                row["start_time"] if row["start_time"] is not None else 0.0,
+                row["turn_index"] if row["turn_index"] is not None else 10_000,
+            )
+        )
+        speaker_history: dict[str, dict[str, float]] = defaultdict(
+            lambda: {
+                "turn_count": 0.0,
+                "overlap_count": 0.0,
+                "gap_sum": 0.0,
+                "duration_sum": 0.0,
+            }
+        )
+        previous: dict[str, object] | None = None
+        for index, item in enumerate(dialogue_items):
+            speaker_id = str(item.get("speaker_id") or "")
+            start_time = item.get("start_time")
+            end_time = item.get("end_time")
+            duration = max(0.0, float(end_time) - float(start_time)) if start_time is not None and end_time is not None else float(item.get("duration") or 0.0)
+
+            if previous and start_time is not None and previous.get("end_time") is not None:
+                previous_end = float(previous["end_time"])
+                gap_prev = float(start_time) - previous_end
+                overlap_prev = max(0.0, previous_end - float(start_time))
+                previous_speaker = str(previous.get("speaker_id") or "")
+                speaker_switch = speaker_id != previous_speaker
+            else:
+                gap_prev = 0.0
+                overlap_prev = 0.0
+                speaker_switch = False
+
+            history = speaker_history[speaker_id]
+            previous_turns = history["turn_count"]
+            speaker_prev_mean_gap = history["gap_sum"] / max(previous_turns, 1.0)
+            speaker_prev_mean_duration = history["duration_sum"] / max(previous_turns, 1.0)
+            speaker_prev_overlap_rate = history["overlap_count"] / max(previous_turns, 1.0)
+            relative_gap = gap_prev - speaker_prev_mean_gap if previous_turns > 0 else 0.0
+            overlap_ratio = overlap_prev / max(duration, 1e-6)
+
+            item["interaction_features"] = {
+                "duration": round(duration, 3),
+                "gap_prev": round(gap_prev, 3),
+                "relative_gap": round(relative_gap, 3),
+                "overlap_prev": round(overlap_prev, 3),
+                "overlap_ratio": round(overlap_ratio, 3),
+                "speaker_switch": bool(previous and speaker_switch),
+                "is_interrupting_prev": bool(previous and speaker_switch and overlap_prev > 0.0),
+                "speaker_prev_overlap_rate": round(speaker_prev_overlap_rate, 3),
+                "speaker_prev_mean_gap": round(speaker_prev_mean_gap, 3),
+                "speaker_prev_mean_duration": round(speaker_prev_mean_duration, 3),
+                "turn_position": round(index / max(len(dialogue_items) - 1, 1), 3),
+            }
+
+            history["turn_count"] += 1.0
+            history["overlap_count"] += 1.0 if overlap_prev > 0.05 else 0.0
+            history["gap_sum"] += gap_prev
+            history["duration_sum"] += duration
+            previous = item
+
+
+def model_display_name(model_id: str) -> str:
+    if model_id in MODEL_DISPLAY_NAMES:
+        return MODEL_DISPLAY_NAMES[model_id]
+    return model_id.replace("_", " ").replace("-", " ").title()
+
+
+def resolved_model_list(prediction_files: dict[str, Path]) -> list[dict[str, str]]:
+    ordered_ids = [model_id for model_id in MODEL_ORDER if model_id in prediction_files]
+    ordered_ids.extend(model_id for model_id in prediction_files if model_id not in ordered_ids)
+    return [{"id": model_id, "name": model_display_name(model_id)} for model_id in ordered_ids]
+
+
 def main() -> None:
     if METADATA_PATH.exists():
         metadata_rows = [
@@ -336,6 +441,7 @@ def main() -> None:
             "transcript": (str(transcript_row.get("transcript") or meta.get("transcript") or "")).strip(),
             "audio_path": resolve_iemocap_audio_path(utterance_id, meta.get("audio_path", "")),
             "raw_emotion": raw_emotion_label(meta),
+            "raw_emotion_full": raw_emotion_full_name(meta),
             "raw_label": meta.get("original_label", ""),
             "gold_label": gold_label,
             "predictions": model_predictions,
@@ -353,6 +459,7 @@ def main() -> None:
             row["turn_index"] if row["turn_index"] is not None else 10_000,
         )
     )
+    add_interaction_features(items)
 
     sessions = [
         {"id": session_id, "count": count}
@@ -373,11 +480,7 @@ def main() -> None:
                 model: str(path.relative_to(ROOT)) for model, path in prediction_files.items()
             },
         },
-        "models": [
-            {"id": "tim", "name": "WavLM + TIM"},
-            {"id": "mal", "name": "WavLM + MAL"},
-            {"id": "baseline", "name": "WavLM baseline"},
-        ],
+        "models": resolved_model_list(prediction_files),
         "labels": list(LABELS),
         "summary": {
             "utterance_count": len(items),

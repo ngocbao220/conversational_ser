@@ -120,7 +120,7 @@ nodes.nextTurnButton.addEventListener("click", () => {
 });
 
 nodes.streamList.addEventListener("click", (event) => {
-  const interactive = event.target.closest("button, audio, input, select, a, label");
+  const interactive = event.target.closest("button, audio, input, select, a, label, summary");
   if (interactive) return;
 
   const utteranceNode = event.target.closest(".utterance[data-utterance-id]");
@@ -362,6 +362,7 @@ function renderUtterance(item) {
 
   return `
     <article class="utterance ${labelClass}${proofClass}" id="turn-${escapeAttribute(item.utterance_id)}" data-utterance-id="${escapeAttribute(item.utterance_id)}">
+      ${renderInteractionFeatureToggle(item)}
       <div class="utterance-main">
         <div class="speaker">
           <strong>${escapeHtml(item.speaker_id || "speaker")}</strong>
@@ -376,6 +377,41 @@ function renderUtterance(item) {
       ${renderPredictionPanel(item, prediction)}
       ${renderSoftmaxHistogram(item)}
     </article>
+  `;
+}
+
+function renderInteractionFeatureToggle(item) {
+  const features = item.interaction_features || {};
+  const rows = [
+    ["Response timing", "relative_gap", features.relative_gap, "s vs this speaker's previous mean gap"],
+    ["Gap from previous", "gap_prev", features.gap_prev, "s"],
+    ["Floor competition", "overlap_ratio", features.overlap_ratio, "overlap / duration"],
+    ["Overlap", "overlap_prev", features.overlap_prev, "s"],
+    ["Turn-taking", "speaker_switch", features.speaker_switch, ""],
+    ["Interruption", "is_interrupting_prev", features.is_interrupting_prev, ""],
+    ["Speaker overlap style", "speaker_prev_overlap_rate", features.speaker_prev_overlap_rate, "previous overlap rate"],
+    ["Speaker mean gap", "speaker_prev_mean_gap", features.speaker_prev_mean_gap, "s"],
+    ["Speaker mean duration", "speaker_prev_mean_duration", features.speaker_prev_mean_duration, "s"],
+    ["Dialogue position", "turn_position", features.turn_position, "0=start, 1=end"],
+  ];
+  return `
+    <details class="interaction-details">
+      <summary>Interaction features</summary>
+      <div class="interaction-grid">
+        ${rows.map(([label, key, value, note]) => renderInteractionFeature(label, key, value, note)).join("")}
+      </div>
+    </details>
+  `;
+}
+
+function renderInteractionFeature(label, key, value, note) {
+  const shownValue = typeof value === "boolean" ? (value ? "yes" : "no") : Number.isFinite(Number(value)) ? Number(value).toFixed(3) : "n/a";
+  return `
+    <div class="interaction-feature ${value === true ? "active" : ""}">
+      <small>${escapeHtml(label)}</small>
+      <strong>${escapeHtml(shownValue)}</strong>
+      <span>${escapeHtml(key)}${note ? ` · ${escapeHtml(note)}` : ""}</span>
+    </div>
   `;
 }
 
@@ -678,15 +714,22 @@ function renderPredictionPanel(item, activePrediction) {
     <div class="prediction">
       ${renderEmotionSummary(item)}
       ${activePrediction ? "" : renderMissingPrediction(item)}
-      ${renderModelComparison(item)}
     </div>
   `;
 }
 
 function renderEmotionSummary(item) {
-  const raw = item.raw_label && item.raw_emotion && item.raw_label !== item.raw_emotion
-    ? `${item.raw_label} -> ${item.raw_emotion}`
-    : item.raw_emotion || item.raw_label || "unknown";
+  const rawCode = item.raw_label || "";
+  const rawFull = item.raw_emotion_full || "";
+  const mapped = item.raw_emotion || "";
+  let raw = "unknown";
+  if (rawCode && rawFull && mapped && rawFull !== mapped) {
+    raw = `${rawCode} -> ${rawFull} -> ${mapped}`;
+  } else if (rawCode && rawFull && rawCode !== rawFull) {
+    raw = `${rawCode} -> ${rawFull}`;
+  } else {
+    raw = rawFull || mapped || rawCode || "unknown";
+  }
   return `
     <div class="emotion-summary">
       <span class="emotion-token">
@@ -697,37 +740,8 @@ function renderEmotionSummary(item) {
         <small>ground truth</small>
         <strong><span class="badge small ${item.gold_label || "missing"}">${escapeHtml(item.gold_label || "unknown")}</span></strong>
       </span>
-      ${renderModelPredictionTokens(item)}
     </div>
   `;
-}
-
-function renderModelPredictionTokens(item) {
-  return state.data.models
-    .map((model) => {
-      const prediction = item.predictions[model.id];
-      if (!prediction) {
-        return `
-          <span class="emotion-token model-token missing-model">
-            <small>${escapeHtml(model.name)}</small>
-            <strong>missing</strong>
-          </span>
-        `;
-      }
-      const correct = prediction.label === item.gold_label;
-      const confidence = Math.round((prediction.confidence || 0) * 100);
-      return `
-        <span class="emotion-token model-token ${correct ? "correct" : "wrong"}">
-          <small>${escapeHtml(model.name)}</small>
-          <strong>
-            <span class="model-dot" style="background:${modelColors[model.id] || "#475569"}"></span>
-            ${escapeHtml(prediction.label)}
-            <em>${confidence}%</em>
-          </strong>
-        </span>
-      `;
-    })
-    .join("");
 }
 
 function renderSoftmaxHistogram(item) {
@@ -736,75 +750,53 @@ function renderSoftmaxHistogram(item) {
   return `
     <div class="softmax-histogram" aria-label="Softmax probabilities by model">
       <div class="histogram-head">
-        <span>Model softmax comparison</span>
-        <span>${state.data.models.map((model) => renderModelLegend(model)).join("")}</span>
+        <span>Model softmax histograms</span>
+        <span>ground truth: ${escapeHtml(item.gold_label || "unknown")}</span>
       </div>
-      ${state.data.labels.map((label) => renderSoftmaxLabelRow(item, label)).join("")}
-    </div>
-  `;
-}
-
-function renderModelLegend(model) {
-  return `<span class="legend-item"><span class="model-dot" style="background:${modelColors[model.id] || "#475569"}"></span>${escapeHtml(model.id)}</span>`;
-}
-
-function renderSoftmaxLabelRow(item, label) {
-  return `
-    <div class="histogram-row">
-      <span class="histogram-label ${label}">${label}</span>
-      <div class="histogram-bars">
-        ${state.data.models.map((model) => renderModelProbabilityBar(item, model, label)).join("")}
+      <div class="model-histogram-grid">
+        ${state.data.models.map((model) => renderModelHistogram(item, model)).join("")}
       </div>
     </div>
   `;
 }
 
-function renderModelProbabilityBar(item, model, label) {
+function renderModelHistogram(item, model) {
   const prediction = item.predictions[model.id];
+  if (!prediction) {
+    return `
+      <div class="model-histogram-card missing">
+        <header>
+          <span><span class="model-dot" style="background:${modelColors[model.id] || "#475569"}"></span>${escapeHtml(model.name)}</span>
+          <strong>missing</strong>
+        </header>
+      </div>
+    `;
+  }
+  const correct = prediction.label === item.gold_label;
+  return `
+    <div class="model-histogram-card ${correct ? "correct" : "wrong"}">
+      <header>
+        <span><span class="model-dot" style="background:${modelColors[model.id] || "#475569"}"></span>${escapeHtml(model.name)}</span>
+        <strong class="${correct ? "correct" : "wrong"}">${escapeHtml(prediction.label || "unknown")}</strong>
+      </header>
+      <div class="model-histogram-bars">
+        ${state.data.labels.map((label) => renderModelEmotionBar(prediction, model, label)).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderModelEmotionBar(prediction, model, label) {
   const value = prediction?.probabilities?.[label] || 0;
   const percentage = Math.round(value * 100);
   const activeClass = prediction?.label === label ? " predicted" : "";
   return `
     <div class="model-prob${activeClass}" title="${escapeAttribute(model.name)} ${label}: ${percentage}%">
-      <span class="model-prob-fill" style="width:${percentage}%; background:${modelColors[model.id] || "#475569"}"></span>
-      <span class="model-prob-text">${escapeHtml(model.id)} ${percentage}%</span>
+      <span class="histogram-label ${label}">${label}</span>
+      <span class="model-prob-fill" style="width:calc((100% - 76px) * ${percentage} / 100); background:${modelColors[model.id] || "#475569"}"></span>
+      <span class="model-prob-text">${percentage}%</span>
     </div>
   `;
-}
-
-function renderModelComparison(item) {
-  const models = ["baseline", "mal", "tim"];
-  const rows = models
-    .map((model) => {
-      const pred = item.predictions[model];
-      if (!pred) return "";
-      const correct = pred.label === item.gold_label;
-      return `<span class="model-pill ${correct ? "correct" : "wrong"}">${model}: ${pred.label}</span>`;
-    })
-    .join("");
-  const proof = isTimFix(item) ? `<span class="proof-pill">${proofText(item.comparison.outcome)}</span>` : "";
-  const paired = pairedOutcomeText(item.comparison?.mal_tim_outcome);
-  const pairedPill = paired ? `<span class="pair-pill ${item.comparison.mal_tim_outcome}">${paired}</span>` : "";
-  return `<div class="model-comparison">${rows}${proof}${pairedPill}</div>`;
-}
-
-function proofText(outcome) {
-  const labels = {
-    tim_correct_baseline_mal_wrong: "TIM fixes both",
-    tim_correct_baseline_wrong: "TIM fixes baseline",
-    tim_correct_mal_wrong: "TIM fixes MAL",
-  };
-  return labels[outcome] || "";
-}
-
-function pairedOutcomeText(outcome) {
-  const labels = {
-    tim_only_correct: "TIM correct, MAL wrong",
-    mal_only_correct: "MAL correct, TIM wrong",
-    both_correct: "MAL and TIM correct",
-    both_wrong: "MAL and TIM wrong",
-  };
-  return labels[outcome] || "";
 }
 
 function renderMissingPrediction(item) {

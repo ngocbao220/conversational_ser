@@ -132,6 +132,7 @@ class TemporalInputPolicy:
 
     mode: str = "real"
     disabled_feature_groups: tuple[str, ...] = ()
+    disabled_features: tuple[str, ...] = ()
     shuffle_seed: int = 0
     feature_names: tuple[str, ...] = tuple(TEMPORAL_FEATURE_NAMES)
 
@@ -141,6 +142,9 @@ class TemporalInputPolicy:
         unknown_groups = set(self.disabled_feature_groups) - set(TEMPORAL_FEATURE_GROUPS)
         if unknown_groups:
             raise ValueError(f"Unknown temporal feature groups: {sorted(unknown_groups)}.")
+        unknown_features = set(self.disabled_features) - set(self.feature_names)
+        if unknown_features:
+            raise ValueError(f"Unknown temporal features for current feature set: {sorted(unknown_features)}.")
 
     @classmethod
     def from_model_config(cls, model_cfg: Mapping[str, Any]) -> "TemporalInputPolicy":
@@ -149,9 +153,15 @@ class TemporalInputPolicy:
             raw_groups = [raw_groups]
         if not isinstance(raw_groups, Sequence):
             raise ValueError("disabled_temporal_feature_groups must be a list of feature-group names.")
+        raw_features = model_cfg.get("disabled_temporal_features", [])
+        if isinstance(raw_features, str):
+            raw_features = [raw_features]
+        if not isinstance(raw_features, Sequence):
+            raise ValueError("disabled_temporal_features must be a list of feature names.")
         return cls(
             mode=str(model_cfg.get("temporal_input_mode", "real")),
             disabled_feature_groups=tuple(str(group) for group in raw_groups),
+            disabled_features=tuple(str(feature) for feature in raw_features),
             shuffle_seed=int(model_cfg.get("temporal_shuffle_seed", 0)),
             feature_names=tuple(TEMPORAL_FEATURE_SETS.get(str(model_cfg.get("temporal_feature_set", "v1")), TEMPORAL_FEATURE_NAMES)),
         )
@@ -168,6 +178,9 @@ class TemporalInputPolicy:
 
         for group in self.disabled_feature_groups:
             indices = [self.feature_names.index(name) for name in TEMPORAL_FEATURE_GROUPS[group] if name in self.feature_names]
+            transformed[:, indices] = 0.0
+        if self.disabled_features:
+            indices = [self.feature_names.index(name) for name in self.disabled_features]
             transformed[:, indices] = 0.0
 
         if self.mode == "shuffled" and len(transformed) > 1:

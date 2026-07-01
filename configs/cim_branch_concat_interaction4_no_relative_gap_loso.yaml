@@ -1,0 +1,79 @@
+run_name: cim_branch_concat_interaction4_no_relative_gap_loso
+experiment_name: cim_branch_concat_interaction4_no_relative_gap_loso
+output_dir: results/cim_ablations_loso/no_relative_gap
+seed: 42
+
+dataset:
+  name: iemocap
+  iemocap_root: data/iemocap
+  auto_download: true
+  kaggle_dataset: sangayb/iemocap
+  test_session: 5
+  validation_ratio: 0.1
+  sampling_rate: 16000
+  max_duration_seconds: null
+
+model:
+  wavlm_model_name: microsoft/wavlm-base
+  freeze_wavlm: true
+  unfreeze_last_n_layers: 0
+  num_labels: 4
+  memory_dim: 128
+  temporal_feature_set: interaction_4
+  temporal_feature_dim: 4
+  temporal_emb_dim: 64
+  temporal_hidden_dim: 64
+  dropout: 0.2
+  alpha_init: 0.0
+  beta_init: 0.0
+  fusion_mode: branch_concat
+  fix_alpha_zero: false
+  fix_beta_zero: false
+  temporal_input_mode: real
+  disabled_temporal_feature_groups: []
+  disabled_temporal_features: [relative_gap_to_speaker_mean]
+  temporal_shuffle_seed: 0
+  short_gap_threshold: 0.3
+  long_gap_threshold: 1.0
+  overlap_threshold: 0.05
+
+precompute:
+  enabled: true
+  pooling: mean
+  cache_path: results/wavlm_shared/cache/wavlm_mean_embeddings.pt
+  force_recompute: false
+  batch_size: 16
+
+cross_session:
+  enabled: true
+  test_sessions: [1, 2, 3, 4, 5]
+  run_name: null
+
+training:
+  device: auto
+  batch_mode: dialogue
+  batch_size: 16
+  eval_batch_size: 16
+  max_epochs: 150
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  scheduler: cosine
+  warmup_ratio: 0.1
+  gradient_clip: 1.0
+  selection_metric: UA
+  use_class_weights: false
+  num_workers: 0
+  progress_bar: false
+
+training_stage:
+  mode: end_to_end
+
+analysis:
+  strong_overlap_threshold: 0.25
+
+wandb:
+  use_wandb: true
+  project: conversational-SER
+  run_name: cim_branch_concat_interaction4_no_relative_gap_loso
+  entity: null
+  mode: online
