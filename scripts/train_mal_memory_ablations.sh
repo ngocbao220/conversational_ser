@@ -9,5 +9,5 @@ CONFIGS=(
 
 for config in "${CONFIGS[@]}"; do
   echo "Running ${config}"
-  python scripts/train_wavlm_mal.py --config "${config}"
+  python -m scripts.train_wavlm_mal --config "${config}"
 done
