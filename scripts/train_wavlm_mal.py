@@ -456,7 +456,14 @@ def main() -> None:
         ),
     )
     append_log(log_path, f"temporal_feature_mode={config['model']['temporal_feature_mode']} dim={config['model']['temporal_feature_dim']}")
-    append_log(log_path, "memory_order=read_before_write reset=dialogue_boundary")
+    append_log(
+        log_path,
+        (
+            "memory_order=read_before_write reset=dialogue_boundary "
+            f"memory_ablation_mode={config['model'].get('memory_ablation_mode', 'normal')} "
+            f"memory_shuffle_seed={config['model'].get('memory_shuffle_seed', 0)}"
+        ),
+    )
     append_log(log_path, f"parameters mal total={counts['total']:,} trainable={counts['trainable']:,}")
     if wavlm_extractor is not None:
         append_log(log_path, f"parameters wavlm total={wavlm_counts['total']:,} trainable={wavlm_counts['trainable']:,}")
