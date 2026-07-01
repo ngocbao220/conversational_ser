@@ -104,6 +104,7 @@ class WavLMDualBranchTIMSerModel(nn.Module):
         "residual_gated",
         "residual_sum",
         "branch_sum",
+        "branch_concat",
         "dialogue_only",
         "temporal_only",
     }
@@ -133,9 +134,10 @@ class WavLMDualBranchTIMSerModel(nn.Module):
         )
         self.alpha = nn.Parameter(torch.tensor(float(config.alpha_init)))
         self.beta = nn.Parameter(torch.tensor(float(config.beta_init)))
+        classifier_input_dim = config.embedding_dim * 2 if config.fusion_mode == "branch_concat" else config.embedding_dim
         self.classifier = nn.Sequential(
             nn.Dropout(config.dropout),
-            nn.Linear(config.embedding_dim, config.num_labels),
+            nn.Linear(classifier_input_dim, config.num_labels),
         )
 
     def fuse(
@@ -153,6 +155,8 @@ class WavLMDualBranchTIMSerModel(nn.Module):
             return embedding + dialogue_residual + temporal_residual
         if mode == "branch_sum":
             return dialogue_residual + temporal_residual
+        if mode == "branch_concat":
+            return torch.cat([dialogue_residual, temporal_residual], dim=-1)
         if mode == "dialogue_only":
             return dialogue_residual
         if mode == "temporal_only":

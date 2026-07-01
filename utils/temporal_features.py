@@ -85,10 +85,18 @@ TIM_SELECTED_PRIMITIVE_FEATURE_NAMES = [
     "window3_average_gap",
 ]
 
+TIM_INTERACTION_4_FEATURE_NAMES = [
+    "relative_gap_to_speaker_mean",
+    "overlap_ratio",
+    "speaker_switch",
+    "speaker_prev_overlap_rate",
+]
+
 TEMPORAL_FEATURE_SETS = {
     "v1": TEMPORAL_FEATURE_NAMES,
     "recommended_v2": TIM_V2_RECOMMENDED_FEATURE_NAMES,
     "selected_primitives": TIM_SELECTED_PRIMITIVE_FEATURE_NAMES,
+    "interaction_4": TIM_INTERACTION_4_FEATURE_NAMES,
 }
 
 BINARY_TEMPORAL_FEATURES = {
