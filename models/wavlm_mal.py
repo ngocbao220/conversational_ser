@@ -74,7 +74,7 @@ class MALMemoryModule(nn.Module):
         if self.memory_ablation_mode == "shuffled_order" and embeddings.shape[0] > 1:
             generator = torch.Generator(device="cpu")
             generator.manual_seed(self.memory_shuffle_seed + int(embeddings.shape[0]))
-            order = torch.randperm(embeddings.shape[0], generator=generator, device=embeddings.device)
+            order = torch.randperm(embeddings.shape[0], generator=generator).to(embeddings.device)
             inverse_order = torch.empty_like(order)
             inverse_order[order] = torch.arange(embeddings.shape[0], device=embeddings.device)
             embeddings = embeddings[order]
