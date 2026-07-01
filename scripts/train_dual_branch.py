@@ -59,6 +59,10 @@ PREDICTION_TEMPORAL_COLUMNS = [
 
 
 def configure_trainable_gates(model: WavLMDualBranchTIMSerModel, model_cfg: Mapping[str, Any]) -> None:
+    if str(model_cfg.get("fusion_mode", "residual_gated")) != "residual_gated":
+        model.alpha.requires_grad_(False)
+        model.beta.requires_grad_(False)
+        return
     if bool(model_cfg.get("fix_alpha_zero", False)):
         with torch.no_grad():
             model.alpha.fill_(0.0)

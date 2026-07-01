@@ -18,6 +18,7 @@ class WavLMDualBranchTIMConfig:
     dropout: float = 0.2
     alpha_init: float = 0.0
     beta_init: float = 0.0
+    fusion_mode: str = "residual_gated"
 
 
 class TemporalInteractionEncoder(nn.Module):
@@ -99,9 +100,20 @@ class TemporalMemoryBranch(nn.Module):
 
 
 class WavLMDualBranchTIMSerModel(nn.Module):
+    SUPPORTED_FUSION_MODES = {
+        "residual_gated",
+        "residual_sum",
+        "branch_sum",
+        "dialogue_only",
+        "temporal_only",
+    }
+
     def __init__(self, config: WavLMDualBranchTIMConfig) -> None:
         super().__init__()
         self.config = config
+        if config.fusion_mode not in self.SUPPORTED_FUSION_MODES:
+            supported = ", ".join(sorted(self.SUPPORTED_FUSION_MODES))
+            raise ValueError(f"Unsupported fusion_mode={config.fusion_mode!r}. Supported values: {supported}.")
         self.temporal_encoder = TemporalInteractionEncoder(
             input_dim=config.temporal_feature_dim,
             temporal_emb_dim=config.temporal_emb_dim,
@@ -125,6 +137,27 @@ class WavLMDualBranchTIMSerModel(nn.Module):
             nn.Dropout(config.dropout),
             nn.Linear(config.embedding_dim, config.num_labels),
         )
+
+    def fuse(
+        self,
+        embedding: torch.Tensor,
+        dialogue_residual: torch.Tensor,
+        temporal_residual: torch.Tensor,
+        alpha_gate: torch.Tensor,
+        beta_gate: torch.Tensor,
+    ) -> torch.Tensor:
+        mode = self.config.fusion_mode
+        if mode == "residual_gated":
+            return embedding + alpha_gate * dialogue_residual + beta_gate * temporal_residual
+        if mode == "residual_sum":
+            return embedding + dialogue_residual + temporal_residual
+        if mode == "branch_sum":
+            return dialogue_residual + temporal_residual
+        if mode == "dialogue_only":
+            return dialogue_residual
+        if mode == "temporal_only":
+            return temporal_residual
+        raise AssertionError(f"Unhandled fusion mode: {mode}")
 
     def forward(
         self,
@@ -155,7 +188,7 @@ class WavLMDualBranchTIMSerModel(nn.Module):
         for embedding, temporal_embedding in zip(embeddings, temporal_embeddings):
             dialogue_residual, dialogue_z = self.dialogue_branch.read(embedding, dialogue_state)
             temporal_residual, temporal_z = self.temporal_branch.read(temporal_embedding, temporal_state)
-            fused = embedding + alpha_gate * dialogue_residual + beta_gate * temporal_residual
+            fused = self.fuse(embedding, dialogue_residual, temporal_residual, alpha_gate, beta_gate)
             logits.append(self.classifier(fused))
             dialogue_residuals.append(dialogue_residual)
             temporal_residuals.append(temporal_residual)
@@ -174,6 +207,7 @@ class WavLMDualBranchTIMSerModel(nn.Module):
             "dialogue_residuals": dialogue_residual_tensor,
             "temporal_residuals": temporal_residual_tensor,
             "fused_embeddings": torch.stack(fused_embeddings, dim=0),
+            "fusion_mode": self.config.fusion_mode,
             "alpha_value": float(alpha_gate.detach().cpu().item()),
             "beta_value": float(beta_gate.detach().cpu().item()),
         }
@@ -193,5 +227,6 @@ def build_wavlm_dual_branch_tim_ser_model(model_cfg: dict, embedding_dim: int) -
         dropout=float(model_cfg.get("dropout", 0.2)),
         alpha_init=float(model_cfg.get("alpha_init", 0.0)),
         beta_init=float(model_cfg.get("beta_init", 0.0)),
+        fusion_mode=str(model_cfg.get("fusion_mode", "residual_gated")),
     )
     return WavLMDualBranchTIMSerModel(config)
