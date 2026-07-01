@@ -10,5 +10,5 @@ CONFIGS=(
 
 for config in "${CONFIGS[@]}"; do
   echo "Running ${config}"
-  python scripts/train_dual_branch.py --config "${config}"
+  python -m scripts.train_dual_branch --config "${config}"
 done
