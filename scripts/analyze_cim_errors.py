@@ -10,8 +10,8 @@ from typing import Any, Iterable, Mapping
 
 
 PAIR_CATEGORIES = (
-    "cim_only_correct",
-    "cdm_only_correct",
+    "cim_correct_cdm_wrong",
+    "cdm_correct_cim_wrong",
     "both_correct",
     "both_wrong",
 )
@@ -44,9 +44,9 @@ def paired_category(cdm_row: Mapping[str, str], cim_row: Mapping[str, str]) -> s
     cdm_correct = cdm_row["pred_label"] == gold
     cim_correct = cim_row["pred_label"] == gold
     if cim_correct and not cdm_correct:
-        return "cim_only_correct"
+        return "cim_correct_cdm_wrong"
     if cdm_correct and not cim_correct:
-        return "cdm_only_correct"
+        return "cdm_correct_cim_wrong"
     if cim_correct:
         return "both_correct"
     return "both_wrong"
@@ -57,8 +57,8 @@ def summarize_groups(groups: Mapping[str, Iterable[str]]) -> dict[str, dict[str,
     for group_name, categories in sorted(groups.items()):
         counts = Counter(categories)
         total = sum(counts.values())
-        cdm_correct = counts["cdm_only_correct"] + counts["both_correct"]
-        cim_correct = counts["cim_only_correct"] + counts["both_correct"]
+        cdm_correct = counts["cdm_correct_cim_wrong"] + counts["both_correct"]
+        cim_correct = counts["cim_correct_cdm_wrong"] + counts["both_correct"]
         summary[group_name] = {
             "n": total,
             "paired_counts": {category: counts[category] for category in PAIR_CATEGORIES},

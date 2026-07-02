@@ -57,8 +57,8 @@
     "cdm_cim_paired_counts": {
       "both_correct": 1031,
       "both_wrong": 391,
-      "cdm_only_correct": 126,
-      "cim_only_correct": 102,
+      "cdm_correct_cim_wrong": 126,
+      "cim_correct_cdm_wrong": 102,
       "missing_prediction": 544
     }
   },
@@ -374,7 +374,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 9.0,
@@ -4339,7 +4339,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 5.66,
@@ -5025,7 +5025,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.22,
@@ -5308,7 +5308,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 4.16,
@@ -6237,7 +6237,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 4.96,
@@ -6438,7 +6438,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 4.56,
@@ -7366,7 +7366,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 10.88,
@@ -7568,7 +7568,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 7.19,
@@ -7689,7 +7689,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 9.87,
@@ -9549,7 +9549,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.738,
@@ -10237,7 +10237,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.18,
@@ -11370,7 +11370,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 4.38,
@@ -14189,7 +14189,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.22,
@@ -14351,7 +14351,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.04,
@@ -15846,7 +15846,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.93,
@@ -15967,7 +15967,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.37,
@@ -16210,7 +16210,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.59,
@@ -16291,7 +16291,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.08,
@@ -16613,7 +16613,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 4.36,
@@ -16895,7 +16895,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.79,
@@ -17057,7 +17057,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.1,
@@ -17421,7 +17421,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.125,
@@ -17502,7 +17502,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.61,
@@ -17583,7 +17583,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.77,
@@ -17745,7 +17745,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.76,
@@ -18069,7 +18069,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.02,
@@ -18150,7 +18150,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.16,
@@ -18474,7 +18474,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 4.92,
@@ -18676,7 +18676,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.93,
@@ -20093,7 +20093,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.79,
@@ -20579,7 +20579,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.79,
@@ -21833,7 +21833,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.19,
@@ -22359,7 +22359,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.68,
@@ -23047,7 +23047,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.37,
@@ -23209,7 +23209,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.92,
@@ -24181,7 +24181,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.69,
@@ -24262,7 +24262,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.66,
@@ -24505,7 +24505,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.45,
@@ -25153,7 +25153,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.48,
@@ -25315,7 +25315,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.03,
@@ -25841,7 +25841,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.68,
@@ -26894,7 +26894,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 5.03,
@@ -27704,7 +27704,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.28,
@@ -28594,7 +28594,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.208,
@@ -29120,7 +29120,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 4.95,
@@ -30132,7 +30132,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 6.66,
@@ -30577,7 +30577,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.581,
@@ -31669,7 +31669,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 7.504,
@@ -34260,7 +34260,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.44,
@@ -34341,7 +34341,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.97,
@@ -34422,7 +34422,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.75,
@@ -34503,7 +34503,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.36,
@@ -37944,7 +37944,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.02,
@@ -38511,7 +38511,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.164,
@@ -38835,7 +38835,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 4.17,
@@ -40089,7 +40089,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.39,
@@ -40332,7 +40332,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.59,
@@ -40534,7 +40534,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 0.94,
@@ -40857,7 +40857,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.72,
@@ -42799,7 +42799,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.51,
@@ -42961,7 +42961,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.89,
@@ -43042,7 +43042,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.08,
@@ -43123,7 +43123,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.4,
@@ -43204,7 +43204,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.93,
@@ -44540,7 +44540,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 6.4,
@@ -44702,7 +44702,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 7.2,
@@ -44783,7 +44783,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.44,
@@ -44864,7 +44864,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 0.78,
@@ -45876,7 +45876,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 3.0,
@@ -46523,7 +46523,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.25,
@@ -49233,7 +49233,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 4.22,
@@ -49314,7 +49314,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.83,
@@ -49638,7 +49638,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.06,
@@ -49800,7 +49800,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.43,
@@ -49921,7 +49921,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 4.83,
@@ -51899,7 +51899,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.34,
@@ -52829,7 +52829,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 9.92,
@@ -57354,7 +57354,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.561,
@@ -57435,7 +57435,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.378,
@@ -57516,7 +57516,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 10.015,
@@ -58001,7 +58001,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 15.546,
@@ -61597,7 +61597,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 7.017,
@@ -61678,7 +61678,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.92,
@@ -61921,7 +61921,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.97,
@@ -62204,7 +62204,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 9.79,
@@ -62487,7 +62487,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 11.438,
@@ -62568,7 +62568,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 8.646,
@@ -63335,7 +63335,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.997,
@@ -63416,7 +63416,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.063,
@@ -64225,7 +64225,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.922,
@@ -64508,7 +64508,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 10.97,
@@ -67379,7 +67379,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 11.744,
@@ -72265,7 +72265,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.13,
@@ -72709,7 +72709,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.83,
@@ -72790,7 +72790,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 5.11,
@@ -72911,7 +72911,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.52,
@@ -74203,7 +74203,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.62,
@@ -74324,7 +74324,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.96,
@@ -74445,7 +74445,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 6.97,
@@ -75818,7 +75818,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.59,
@@ -76667,7 +76667,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.5,
@@ -76788,7 +76788,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.45,
@@ -82365,7 +82365,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 4.28,
@@ -82486,7 +82486,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.39,
@@ -82567,7 +82567,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.3,
@@ -82729,7 +82729,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 3.11,
@@ -86045,7 +86045,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 4.31,
@@ -86933,7 +86933,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 5.03,
@@ -87054,7 +87054,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.08,
@@ -87135,7 +87135,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.57,
@@ -87944,7 +87944,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 4.31,
@@ -88793,7 +88793,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.22,
@@ -88874,7 +88874,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.12,
@@ -88955,7 +88955,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.02,
@@ -90858,7 +90858,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.18,
@@ -91748,7 +91748,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.12,
@@ -92961,7 +92961,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.99,
@@ -93042,7 +93042,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 3.73,
@@ -93123,7 +93123,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 7.38,
@@ -93284,7 +93284,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 4.71,
@@ -93527,7 +93527,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.11,
@@ -94215,7 +94215,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.25,
@@ -94458,7 +94458,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.29,
@@ -94782,7 +94782,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 3.41,
@@ -95106,7 +95106,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.34,
@@ -95835,7 +95835,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.78,
@@ -96604,7 +96604,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.91,
@@ -97049,7 +97049,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.66,
@@ -97373,7 +97373,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.34,
@@ -97980,7 +97980,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.95,
@@ -99033,7 +99033,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.88,
@@ -100490,7 +100490,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.9,
@@ -101057,7 +101057,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 5.43,
@@ -101138,7 +101138,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.37,
@@ -103162,7 +103162,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.09,
@@ -103728,7 +103728,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 5.62,
@@ -104618,7 +104618,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 8.44,
@@ -105023,7 +105023,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.12,
@@ -105144,7 +105144,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 6.96,
@@ -105387,7 +105387,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 7.545,
@@ -105872,7 +105872,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.55,
@@ -106034,7 +106034,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.14,
@@ -106196,7 +106196,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.22,
@@ -106358,7 +106358,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.36,
@@ -108663,7 +108663,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.41,
@@ -108825,7 +108825,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.11,
@@ -108906,7 +108906,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.47,
@@ -108987,7 +108987,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.07,
@@ -109068,7 +109068,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.62,
@@ -109149,7 +109149,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 8.69,
@@ -109230,7 +109230,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.45,
@@ -109311,7 +109311,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 7.12,
@@ -109392,7 +109392,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.89,
@@ -109473,7 +109473,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.86,
@@ -109635,7 +109635,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.68,
@@ -109716,7 +109716,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.32,
@@ -109797,7 +109797,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.42,
@@ -109878,7 +109878,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 5.9,
@@ -109959,7 +109959,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.73,
@@ -110040,7 +110040,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.42,
@@ -110121,7 +110121,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 4.82,
@@ -110242,7 +110242,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.9,
@@ -110404,7 +110404,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.32,
@@ -110485,7 +110485,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.01,
@@ -110566,7 +110566,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 3.13,
@@ -111780,7 +111780,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 4.377,
@@ -112063,7 +112063,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.45,
@@ -113438,7 +113438,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.632,
@@ -114167,7 +114167,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 4.83,
@@ -114774,7 +114774,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 7.84,
@@ -115138,7 +115138,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.04,
@@ -118214,7 +118214,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 6.01,
@@ -118495,7 +118495,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.22,
@@ -121444,7 +121444,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.41,
@@ -121565,7 +121565,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.54,
@@ -124433,7 +124433,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 6.64,
@@ -127016,7 +127016,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 7.57,
@@ -127218,7 +127218,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 11.22,
@@ -129036,7 +129036,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.32,
@@ -129117,7 +129117,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.49,
@@ -129360,7 +129360,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 3.37,
@@ -132225,7 +132225,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.67,
@@ -132629,7 +132629,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 7.4,
@@ -133195,7 +133195,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 4.48,
@@ -134973,7 +134973,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 15.684,
@@ -135985,7 +135985,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.88,
@@ -136267,7 +136267,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 7.25,
@@ -136631,7 +136631,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 6.8,
@@ -137273,7 +137273,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.55,
@@ -137394,7 +137394,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 9.448,
@@ -137475,7 +137475,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 9.282,
@@ -137556,7 +137556,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.6,
@@ -137799,7 +137799,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 6.965,
@@ -138729,7 +138729,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 6.13,
@@ -138810,7 +138810,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 8.25,
@@ -138891,7 +138891,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 34.139,
@@ -138972,7 +138972,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 11.64,
@@ -139053,7 +139053,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 15.05,
@@ -139174,7 +139174,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 4.88,
@@ -142044,7 +142044,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.33,
@@ -142165,7 +142165,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 6.11,
@@ -142407,7 +142407,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 0.9,
@@ -143013,7 +143013,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.672,
@@ -144470,7 +144470,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.21,
@@ -144954,7 +144954,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.35,
@@ -145116,7 +145116,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.42,
@@ -145723,7 +145723,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.66,
@@ -145804,7 +145804,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.94,
@@ -146046,7 +146046,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 4.6,
@@ -146127,7 +146127,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 3.92,
@@ -146490,7 +146490,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 10.66,
@@ -146571,7 +146571,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.96,
@@ -146733,7 +146733,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.95,
@@ -146976,7 +146976,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.97,
@@ -147057,7 +147057,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 3.29,
@@ -147460,7 +147460,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 4.04,
@@ -147945,7 +147945,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.84,
@@ -148834,7 +148834,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 5.35,
@@ -148955,7 +148955,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.7,
@@ -149358,7 +149358,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.984,
@@ -149559,7 +149559,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 2.39,
@@ -149680,7 +149680,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 3.64,
@@ -149882,7 +149882,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 3.19,
@@ -150246,7 +150246,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 3.26,
@@ -150812,7 +150812,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 1.88,
@@ -151053,7 +151053,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.59,
@@ -151457,7 +151457,7 @@
         "cdm_correct": true,
         "cim_correct": false,
         "outcome": "cdm_correct_cim_wrong",
-        "cdm_cim_outcome": "cdm_only_correct"
+        "cdm_cim_outcome": "cdm_correct_cim_wrong"
       },
       "interaction_features": {
         "duration": 2.8,
@@ -155622,7 +155622,7 @@
         "cdm_correct": false,
         "cim_correct": true,
         "outcome": "cim_correct_baseline_cdm_wrong",
-        "cdm_cim_outcome": "cim_only_correct"
+        "cdm_cim_outcome": "cim_correct_cdm_wrong"
       },
       "interaction_features": {
         "duration": 1.16,

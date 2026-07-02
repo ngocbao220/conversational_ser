@@ -68,8 +68,8 @@ const views = [
 
 const pairedOutcomes = [
   { id: "all", name: "All paired outcomes", help: "Keep every turn in the current view" },
-  { id: "cim_only_correct", name: "CIM correct, CDM wrong", help: "CIM-only wins" },
-  { id: "cdm_only_correct", name: "CDM correct, CIM wrong", help: "CDM-only wins" },
+  { id: "cim_correct_cdm_wrong", name: "CIM correct, CDM wrong", help: "CIM improves this turn over CDM" },
+  { id: "cdm_correct_cim_wrong", name: "CDM correct, CIM wrong", help: "CDM handles this turn better than CIM" },
   { id: "both_correct", name: "Both correct", help: "CDM and CIM match the gold label" },
   { id: "both_wrong", name: "Both wrong", help: "Both models miss the gold label" },
 ];

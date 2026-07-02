@@ -19,10 +19,10 @@ variants:
       disabled_temporal_feature_groups: []
       fix_alpha_zero: false
       fix_beta_zero: true
-- name: dual_branch_interaction_only
+- name: dual_branch_cim_acoustic_interaction
   overrides:
-    run_name: dual_branch_interaction_only
-    output_dir: results/architecture_ablation/legacy_dual_branch/interaction_only
+    run_name: dual_branch_cim_acoustic_interaction
+    output_dir: results/architecture_ablation/legacy_dual_branch/cim_acoustic_interaction
     model:
       temporal_input_mode: real
       disabled_temporal_feature_groups: []

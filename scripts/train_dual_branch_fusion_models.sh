@@ -6,7 +6,6 @@ CONFIGS=(
   "configs/fusion_residual_sum.yaml"
   "configs/fusion_branch_sum.yaml"
   "configs/fusion_dialogue_only.yaml"
-  "configs/fusion_interaction_only.yaml"
 )
 
 for config in "${CONFIGS[@]}"; do

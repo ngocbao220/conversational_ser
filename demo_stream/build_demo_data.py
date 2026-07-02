@@ -272,9 +272,9 @@ def compare_predictions(model_predictions: dict[str, dict[str, object]], gold_la
     if not has_cdm_cim_predictions:
         cdm_cim_outcome = "missing_prediction"
     elif cim_correct and not cdm_correct:
-        cdm_cim_outcome = "cim_only_correct"
+        cdm_cim_outcome = "cim_correct_cdm_wrong"
     elif cdm_correct and not cim_correct:
-        cdm_cim_outcome = "cdm_only_correct"
+        cdm_cim_outcome = "cdm_correct_cim_wrong"
     elif cim_correct:
         cdm_cim_outcome = "both_correct"
     else:

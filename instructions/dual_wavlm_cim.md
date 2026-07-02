@@ -301,7 +301,7 @@ Implement or prepare config variants:
 2. dual_branch_no_temporal
    - beta fixed to 0
    - should behave like dialogue branch only
-3. dual_branch_interaction_only
+3. dual_branch_cim_acoustic_interaction
    - alpha fixed to 0
    - use h_i + temporal branch only
 4. dual_branch_zero_temporal

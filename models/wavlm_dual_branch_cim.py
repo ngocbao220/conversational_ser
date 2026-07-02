@@ -106,7 +106,7 @@ class WavLMDualBranchCIMSerModel(nn.Module):
         "branch_sum",
         "branch_concat",
         "dialogue_only",
-        "temporal_only",
+        "temporal_residual_sum",
     }
 
     def __init__(self, config: WavLMDualBranchCIMConfig) -> None:
@@ -159,8 +159,8 @@ class WavLMDualBranchCIMSerModel(nn.Module):
             return torch.cat([dialogue_residual, temporal_residual], dim=-1)
         if mode == "dialogue_only":
             return dialogue_residual
-        if mode == "temporal_only":
-            return temporal_residual
+        if mode == "temporal_residual_sum":
+            return embedding + temporal_residual
         raise AssertionError(f"Unhandled fusion mode: {mode}")
 
     def forward(

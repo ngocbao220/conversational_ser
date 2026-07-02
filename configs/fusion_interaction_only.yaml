@@ -1,6 +1,6 @@
-run_name: fusion_interaction_only
-experiment_name: fusion_interaction_only
-output_dir: results/main/wavlm/cim
+run_name: legacy_cim_acoustic_interaction
+experiment_name: legacy_cim_acoustic_interaction
+output_dir: results/cim_ablation/legacy_acoustic_interaction
 seed: 42
 dataset:
   name: iemocap
@@ -22,7 +22,7 @@ model:
   dropout: 0.2
   alpha_init: 0.0
   beta_init: 0.0
-  fusion_mode: interaction_only
+  fusion_mode: temporal_residual_sum
   fix_alpha_zero: false
   fix_beta_zero: false
   temporal_input_mode: real
@@ -68,6 +68,6 @@ analysis:
 wandb:
   use_wandb: true
   project: conversational-SER
-  run_name: fusion_interaction_only
+  run_name: legacy_cim_acoustic_interaction
   entity: null
   mode: online
