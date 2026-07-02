@@ -21,9 +21,9 @@ fi
 
 # Model/version folder inside the shared Hugging Face repo.
 # Override examples:
-#   ./scripts/download.sh --model wavlm_tim
-#   MODEL_NAME=wavlm_tim ./scripts/download.sh
-MODEL_NAME="${MODEL_NAME:-wavlm_tim}"
+#   ./scripts/download.sh --model wavlm_cim
+#   MODEL_NAME=wavlm_cim ./scripts/download.sh
+MODEL_NAME="${MODEL_NAME:-wavlm_cim}"
 
 HF_REPO_ID="${HF_REPO_ID:-ngocbao05/ser}"
 PATH_IN_REPO="${PATH_IN_REPO:-$MODEL_NAME}"
@@ -31,14 +31,14 @@ REPO_TYPE="${REPO_TYPE:-model}"
 REVISION="${REVISION:-main}"
 
 # Download target. Repository folders are preserved under this root.
-# Final checkpoint path defaults to `results/wavlm_tim/best.pth`.
+# Final checkpoint path defaults to `results/wavlm_cim/best.pth`.
 DOWNLOAD_ROOT="${DOWNLOAD_ROOT:-results}"
 LOCAL_MODEL_DIR="${LOCAL_MODEL_DIR:-$DOWNLOAD_ROOT/$MODEL_NAME}"
 CHECKPOINT_NAME="${CHECKPOINT_NAME:-best.pth}"
 
 # Evaluation parameters.
 # The bundled evaluator is for legacy B0 checkpoints. Keep download independent
-# so WavLM/MAL/TIM artifact downloads do not fail after completing.
+# so WavLM/CDM/CIM artifact downloads do not fail after completing.
 RUN_EVAL="${RUN_EVAL:-false}"
 SPLIT="${SPLIT:-test}"
 EVAL_OUTPUT="${EVAL_OUTPUT:-$LOCAL_MODEL_DIR/${SPLIT}_metrics.json}"
@@ -73,9 +73,9 @@ Usage:
   ./scripts/download.sh [--model MODEL_NAME] [--repo-id OWNER/REPO] [--download-root PATH]
 
 Environment overrides:
-  MODEL_NAME=wavlm_tim
+  MODEL_NAME=wavlm_cim
   HF_REPO_ID=ngocbao05/ser
-  PATH_IN_REPO=wavlm_tim
+  PATH_IN_REPO=wavlm_cim
   DOWNLOAD_ROOT=results
   CHECKPOINT_NAME=best.pth
   SPLIT_STRATEGY=random

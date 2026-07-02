@@ -2,7 +2,7 @@ const state = {
   data: null,
   session: "Ses05",
   dialogue: "all",
-  model: "tim",
+  model: "cim",
   view: "full",
   pairedOutcome: "all",
   labels: new Set(),
@@ -31,8 +31,8 @@ const colorVars = {
 
 const modelColors = {
   baseline: "#64748b",
-  mal: "#d97706",
-  tim: "#0f766e",
+  cdm: "#d97706",
+  cim: "#0f766e",
 };
 
 const nodes = {
@@ -63,14 +63,14 @@ const nodes = {
 const views = [
   { id: "full", name: "Full dialogue", help: "All Session 5 turns, preserving context" },
   { id: "evaluated", name: "Evaluated only", help: "Only utterances with model predictions" },
-  { id: "tim_fixes", name: "TIM fixes only", help: "TIM correct while baseline or MAL is wrong" },
+  { id: "cim_fixes", name: "CIM fixes only", help: "CIM correct while baseline or CDM is wrong" },
 ];
 
 const pairedOutcomes = [
   { id: "all", name: "All paired outcomes", help: "Keep every turn in the current view" },
-  { id: "tim_only_correct", name: "TIM correct, MAL wrong", help: "TIM-only wins" },
-  { id: "mal_only_correct", name: "MAL correct, TIM wrong", help: "MAL-only wins" },
-  { id: "both_correct", name: "Both correct", help: "MAL and TIM match the gold label" },
+  { id: "cim_only_correct", name: "CIM correct, CDM wrong", help: "CIM-only wins" },
+  { id: "cdm_only_correct", name: "CDM correct, CIM wrong", help: "CDM-only wins" },
+  { id: "both_correct", name: "Both correct", help: "CDM and CIM match the gold label" },
   { id: "both_wrong", name: "Both wrong", help: "Both models miss the gold label" },
 ];
 
@@ -189,7 +189,7 @@ function renderViewControls() {
 }
 
 function renderPairControls() {
-  const counts = state.data.summary.mal_tim_paired_counts || {};
+  const counts = state.data.summary.cdm_cim_paired_counts || {};
   nodes.pairControls.innerHTML = pairedOutcomes
     .map((outcome) => {
       const active = state.pairedOutcome === outcome.id ? " active" : "";
@@ -267,8 +267,8 @@ function filteredUtterances() {
     if (state.session !== "all" && item.session_id !== state.session) return false;
     if (state.dialogue !== "all" && item.dialogue_id !== state.dialogue) return false;
     if (state.view === "evaluated" && !prediction) return false;
-    if (state.view === "tim_fixes" && !isTimFix(item)) return false;
-    if (state.pairedOutcome !== "all" && item.comparison?.mal_tim_outcome !== state.pairedOutcome) return false;
+    if (state.view === "cim_fixes" && !isCimFix(item)) return false;
+    if (state.pairedOutcome !== "all" && item.comparison?.cdm_cim_outcome !== state.pairedOutcome) return false;
     if (state.labels.size > 0 && (!prediction || !state.labels.has(prediction.label))) return false;
     if (!state.search) return true;
     const haystack = [
@@ -285,11 +285,11 @@ function filteredUtterances() {
   });
 }
 
-function isTimFix(item) {
+function isCimFix(item) {
   const comparison = item.comparison || {};
-  return comparison.outcome === "tim_correct_baseline_mal_wrong"
-    || comparison.outcome === "tim_correct_baseline_wrong"
-    || comparison.outcome === "tim_correct_mal_wrong";
+  return comparison.outcome === "cim_correct_baseline_cdm_wrong"
+    || comparison.outcome === "cim_correct_baseline_wrong"
+    || comparison.outcome === "cim_correct_cdm_wrong";
 }
 
 function renderLabelBars(utterances) {
@@ -315,21 +315,21 @@ function renderLabelBars(utterances) {
 
 function renderEvidencePanel(utterances) {
   const compared = utterances.filter((item) => item.comparison?.has_all_predictions);
-  const timCorrect = compared.filter((item) => item.comparison.tim_correct).length;
+  const cimCorrect = compared.filter((item) => item.comparison.cim_correct).length;
   const baselineCorrect = compared.filter((item) => item.comparison.baseline_correct).length;
-  const malCorrect = compared.filter((item) => item.comparison.mal_correct).length;
-  const timFixBaseline = compared.filter((item) => item.comparison.outcome === "tim_correct_baseline_wrong" || item.comparison.outcome === "tim_correct_baseline_mal_wrong").length;
-  const timFixMal = compared.filter((item) => item.comparison.outcome === "tim_correct_mal_wrong" || item.comparison.outcome === "tim_correct_baseline_mal_wrong").length;
-  const timFixBoth = compared.filter((item) => item.comparison.outcome === "tim_correct_baseline_mal_wrong").length;
+  const cdmCorrect = compared.filter((item) => item.comparison.cdm_correct).length;
+  const cimFixBaseline = compared.filter((item) => item.comparison.outcome === "cim_correct_baseline_wrong" || item.comparison.outcome === "cim_correct_baseline_cdm_wrong").length;
+  const cimFixCdm = compared.filter((item) => item.comparison.outcome === "cim_correct_cdm_wrong" || item.comparison.outcome === "cim_correct_baseline_cdm_wrong").length;
+  const cimFixBoth = compared.filter((item) => item.comparison.outcome === "cim_correct_baseline_cdm_wrong").length;
 
   nodes.evidencePanel.innerHTML = [
     renderEvidenceMetric("Compared", compared.length, "utterances with all 3 predictions"),
-    renderEvidenceMetric("TIM correct", timCorrect, percent(timCorrect, compared.length)),
+    renderEvidenceMetric("CIM correct", cimCorrect, percent(cimCorrect, compared.length)),
     renderEvidenceMetric("Baseline correct", baselineCorrect, percent(baselineCorrect, compared.length)),
-    renderEvidenceMetric("MAL correct", malCorrect, percent(malCorrect, compared.length)),
-    renderEvidenceMetric("TIM fixes baseline", timFixBaseline, "baseline wrong, TIM correct"),
-    renderEvidenceMetric("TIM fixes MAL", timFixMal, "MAL wrong, TIM correct"),
-    renderEvidenceMetric("TIM fixes both", timFixBoth, "baseline and MAL wrong"),
+    renderEvidenceMetric("CDM correct", cdmCorrect, percent(cdmCorrect, compared.length)),
+    renderEvidenceMetric("CIM fixes baseline", cimFixBaseline, "baseline wrong, CIM correct"),
+    renderEvidenceMetric("CIM fixes CDM", cimFixCdm, "CDM wrong, CIM correct"),
+    renderEvidenceMetric("CIM fixes both", cimFixBoth, "baseline and CDM wrong"),
   ].join("");
 }
 
@@ -358,7 +358,7 @@ function renderUtterance(item) {
     ? `<audio class="audio" controls preload="none" src="../${escapeAttribute(item.audio_path)}"></audio>`
     : "";
   const labelClass = prediction?.label || "unpredicted";
-  const proofClass = isTimFix(item) ? " tim-proof" : "";
+  const proofClass = isCimFix(item) ? " cim-proof" : "";
 
   return `
     <article class="utterance ${labelClass}${proofClass}" id="turn-${escapeAttribute(item.utterance_id)}" data-utterance-id="${escapeAttribute(item.utterance_id)}">

@@ -31,7 +31,7 @@ TEMPORAL_FEATURE_NAMES = [
     "speaker_prev_turn_count_norm",
 ]
 
-TIM_V2_RECOMMENDED_FEATURE_NAMES = [
+CIM_V2_RECOMMENDED_FEATURE_NAMES = [
     "duration",
     "gap_prev",
     "prev_gap_abs",
@@ -70,7 +70,7 @@ TIM_V2_RECOMMENDED_FEATURE_NAMES = [
     "consecutive_overlap_count",
 ]
 
-TIM_SELECTED_PRIMITIVE_FEATURE_NAMES = [
+CIM_SELECTED_PRIMITIVE_FEATURE_NAMES = [
     "previous_mean_gap",
     "silence_density_10s",
     "speaker_prev_mean_duration",
@@ -85,7 +85,7 @@ TIM_SELECTED_PRIMITIVE_FEATURE_NAMES = [
     "window3_average_gap",
 ]
 
-TIM_INTERACTION_4_FEATURE_NAMES = [
+CIM_INTERACTION_4_FEATURE_NAMES = [
     "relative_gap_to_speaker_mean",
     "overlap_ratio",
     "speaker_switch",
@@ -94,9 +94,9 @@ TIM_INTERACTION_4_FEATURE_NAMES = [
 
 TEMPORAL_FEATURE_SETS = {
     "v1": TEMPORAL_FEATURE_NAMES,
-    "recommended_v2": TIM_V2_RECOMMENDED_FEATURE_NAMES,
-    "selected_primitives": TIM_SELECTED_PRIMITIVE_FEATURE_NAMES,
-    "interaction_4": TIM_INTERACTION_4_FEATURE_NAMES,
+    "recommended_v2": CIM_V2_RECOMMENDED_FEATURE_NAMES,
+    "selected_primitives": CIM_SELECTED_PRIMITIVE_FEATURE_NAMES,
+    "interaction_4": CIM_INTERACTION_4_FEATURE_NAMES,
 }
 
 BINARY_TEMPORAL_FEATURES = {
@@ -128,7 +128,7 @@ CONTINUOUS_TEMPORAL_FEATURES = [
 
 @dataclass(frozen=True)
 class TemporalInputPolicy:
-    """Applies a reproducible temporal ablation without changing TIM parameters."""
+    """Applies a reproducible temporal ablation without changing CIM parameters."""
 
     mode: str = "real"
     disabled_feature_groups: tuple[str, ...] = ()

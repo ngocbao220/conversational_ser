@@ -9,9 +9,9 @@ from typing import Any, Mapping
 
 METRICS = ("WA", "UA", "WF1", "Macro-F1")
 DEFAULT_RUNS = {
-    "Baseline": Path("results/wavlm_baseline_no_mal_no_tim/metrics.json"),
-    "MAL": Path("results/wavlm_mal_no_tim/metrics.json"),
-    "TIM": Path("results/wavlm_tim/metrics.json"),
+    "Baseline": Path("results/wavlm_baseline_no_cdm_no_cim/metrics.json"),
+    "CDM": Path("results/wavlm_cdm_no_cim/metrics.json"),
+    "CIM": Path("results/wavlm_cim/metrics.json"),
     "dual_branch": Path("results/dual_branch/metrics.json"),
 }
 
@@ -30,7 +30,7 @@ def metric_value(payload: Mapping[str, Any], metric: str) -> float:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Compare Baseline, MAL, TIM and dual-branch metrics.")
+    parser = argparse.ArgumentParser(description="Compare Baseline, CDM, CIM and dual-branch metrics.")
     parser.add_argument("--output-dir", default="results/dual_branch")
     args = parser.parse_args()
 

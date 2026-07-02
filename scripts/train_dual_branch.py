@@ -16,8 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from models.wavlm_dual_branch_tim import WavLMDualBranchTIMSerModel, build_wavlm_dual_branch_tim_ser_model
-from scripts.train_wavlm_tim import (
+from models.wavlm_dual_branch_cim import WavLMDualBranchCIMSerModel, build_wavlm_dual_branch_cim_ser_model
+from scripts.train_wavlm_cim import (
     append_log,
     class_weights_from_dialogues,
     create_scheduler,
@@ -58,7 +58,7 @@ PREDICTION_TEMPORAL_COLUMNS = [
 ]
 
 
-def configure_trainable_gates(model: WavLMDualBranchTIMSerModel, model_cfg: Mapping[str, Any]) -> None:
+def configure_trainable_gates(model: WavLMDualBranchCIMSerModel, model_cfg: Mapping[str, Any]) -> None:
     if str(model_cfg.get("fusion_mode", "residual_gated")) != "residual_gated":
         model.alpha.requires_grad_(False)
         model.beta.requires_grad_(False)
@@ -79,7 +79,7 @@ def set_requires_grad(module: torch.nn.Module, value: bool) -> None:
 
 
 def configure_phase_trainability(
-    model: WavLMDualBranchTIMSerModel,
+    model: WavLMDualBranchCIMSerModel,
     phase_name: str,
     model_cfg: Mapping[str, Any],
 ) -> None:
@@ -121,7 +121,7 @@ def configure_phase_trainability(
 
 
 def make_optimizer_and_scheduler(
-    model: WavLMDualBranchTIMSerModel,
+    model: WavLMDualBranchCIMSerModel,
     config: Mapping[str, Any],
     train_dialogue_count: int,
     max_epochs: int,
@@ -283,7 +283,7 @@ def save_dual_branch_temporal_subset_metrics(
 
 
 def run_dual_branch_dialogue_epoch(
-    model: WavLMDualBranchTIMSerModel,
+    model: WavLMDualBranchCIMSerModel,
     dialogues: Sequence[DialogueEmbedding],
     temporal_builder: TemporalInteractionFeatureBuilder,
     temporal_policy: TemporalInputPolicy,
@@ -386,7 +386,7 @@ def run_dual_branch_dialogue_epoch(
 
 def save_checkpoint(
     path: Path,
-    model: WavLMDualBranchTIMSerModel,
+    model: WavLMDualBranchCIMSerModel,
     config: Mapping[str, Any],
     epoch: int,
     metrics: Mapping[str, Any],
@@ -421,7 +421,7 @@ def residual_subset_name(row: Mapping[str, Any], strong_overlap_threshold: float
 
 def save_branch_gate_stats(
     path: Path,
-    model: WavLMDualBranchTIMSerModel,
+    model: WavLMDualBranchCIMSerModel,
     residual_rows: Sequence[Mapping[str, Any]],
     strong_overlap_threshold: float,
 ) -> Dict[str, Any]:
@@ -500,7 +500,7 @@ def write_single_run_ablation_metrics(output_dir: Path, config: Mapping[str, Any
 
 
 def train_model_with_phase_plan(
-    model: WavLMDualBranchTIMSerModel,
+    model: WavLMDualBranchCIMSerModel,
     train_dialogues: Sequence[DialogueEmbedding],
     val_dialogues: Sequence[DialogueEmbedding],
     temporal_builder: TemporalInteractionFeatureBuilder,
@@ -646,7 +646,7 @@ def train_model_with_phase_plan(
 
 def evaluate_checkpoint_on_test(
     checkpoint_path: Path,
-    model: WavLMDualBranchTIMSerModel,
+    model: WavLMDualBranchCIMSerModel,
     test_dialogues: Sequence[DialogueEmbedding],
     temporal_builder: TemporalInteractionFeatureBuilder,
     temporal_policy: TemporalInputPolicy,
@@ -725,7 +725,7 @@ def save_phase_test_summary(output_dir: Path, phase_metrics: Sequence[Mapping[st
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train dual-branch WavLM + temporal dialogue memory SER model.")
+    parser = argparse.ArgumentParser(description="Train dual-branch WavLM + CIM SER model.")
     parser.add_argument("--config", default="configs/dual_branch.yaml")
     add_dataset_override_args(parser)
     args = parser.parse_args()
@@ -774,7 +774,7 @@ def main() -> None:
     temporal_policy = TemporalInputPolicy.from_model_config(config["model"])
 
     embedding_dim = int(train_dialogues[0].embeddings.shape[-1])
-    model = build_wavlm_dual_branch_tim_ser_model(config["model"], embedding_dim=embedding_dim).to(device)
+    model = build_wavlm_dual_branch_cim_ser_model(config["model"], embedding_dim=embedding_dim).to(device)
     wavlm_extractor = None
     if not bool(config.get("precompute", {}).get("enabled", True)):
         wavlm_extractor = TrainableWavLMMeanExtractor(

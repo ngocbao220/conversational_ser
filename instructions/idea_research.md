@@ -278,10 +278,10 @@ Noisy
 For every recommendation, provide justification using statistical evidence.
 
 ==================================================
-Design Recommendation for TIM
+Design Recommendation for CIM
 ==================================================
 
-Finally propose an improved TIM architecture.
+Finally propose an improved CIM architecture.
 
 Do NOT simply concatenate all temporal features.
 
@@ -333,7 +333,7 @@ subset comparison figures
 
 cross_dataset_comparison.md
 
-tim_design_recommendation.md
+cim_design_recommendation.md
 
 The report should be written as if preparing the "Motivation" and "Method" sections of a top-tier speech emotion recognition paper.
 
@@ -362,4 +362,4 @@ If a temporal feature can already be linearly predicted from WavLM embeddings, m
 
 Otherwise, mark it as complementary.
 
-This section is critical for motivating TIM.
+This section is critical for motivating CIM.

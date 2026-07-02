@@ -31,7 +31,7 @@ python -c "from transformers import WavLMModel; print(WavLMModel.__name__)"
 
 ## B0 - Utterance-Level Baseline
 
-## Experiment 1 - WavLM Baseline No MAL/No TIM
+## Experiment 1 - WavLM Baseline No CDM/No CIM
 
 Đây là control condition chính theo `instructions/baseline.md`.
 
@@ -42,7 +42,7 @@ python -c "from transformers import WavLMModel; print(WavLMModel.__name__)"
 Config YAML:
 
 ```text
-configs/wavlm_baseline_no_mal_no_tim.yaml
+configs/wavlm_baseline_no_cdm_no_cim.yaml
 ```
 
 Mặc định:
@@ -53,7 +53,7 @@ Mặc định:
 - validation: 10% dialogue-level split từ train sessions
 - model: frozen `microsoft/wavlm-base`
 - pooling: attentive statistics pooling
-- không dùng dialogue memory, timestamps, speaker, MAL, TIM trong model
+- không dùng dialogue memory, timestamps, speaker, CDM, CIM trong model
 - checkpoint tốt nhất chọn theo validation UA
 
 Để auto-download từ Kaggle, cần cài `kaggle` và cấu hình credentials bằng một trong hai cách:
@@ -68,27 +68,27 @@ hoặc đặt `kaggle.json` tại `~/.kaggle/kaggle.json`.
 Outputs:
 
 ```text
-results/wavlm_baseline_no_mal_no_tim/metrics.json
-results/wavlm_baseline_no_mal_no_tim/predictions.csv
-results/wavlm_baseline_no_mal_no_tim/config.json
-results/wavlm_baseline_no_mal_no_tim/confusion_matrix.csv
-results/wavlm_baseline_no_mal_no_tim/confusion_matrix.png
-results/wavlm_baseline_no_mal_no_tim/best.pth
-results/wavlm_baseline_no_mal_no_tim/last.pth
+results/wavlm_baseline_no_cdm_no_cim/metrics.json
+results/wavlm_baseline_no_cdm_no_cim/predictions.csv
+results/wavlm_baseline_no_cdm_no_cim/config.json
+results/wavlm_baseline_no_cdm_no_cim/confusion_matrix.csv
+results/wavlm_baseline_no_cdm_no_cim/confusion_matrix.png
+results/wavlm_baseline_no_cdm_no_cim/best.pth
+results/wavlm_baseline_no_cdm_no_cim/last.pth
 ```
 
-## Experiment 2 - WavLM + MAL No TIM
+## Experiment 2 - WavLM + CDM No CIM
 
-Đây là B1 theo `instructions/wavlm_mal.md`: dùng fixed mean-pooled WavLM embeddings, sau đó train MAL dialogue memory theo thứ tự utterance trong từng dialogue.
+Đây là B1 theo `instructions/wavlm_cdm.md`: dùng fixed mean-pooled WavLM embeddings, sau đó train CDM dialogue memory theo thứ tự utterance trong từng dialogue.
 
 ```bash
-./scripts/train_wavlm_mal.sh
+./scripts/train_wavlm_cdm.sh
 ```
 
 Config YAML:
 
 ```text
-configs/wavlm_mal_no_tim.yaml
+configs/wavlm_cdm_no_cim.yaml
 ```
 
 Mặc định:
@@ -97,35 +97,35 @@ Mặc định:
 - WavLM chỉ dùng để precompute fixed mean-pooled embeddings
 - dialogue order được sort bằng `start_time`, `end_time`, `utterance_id`
 - `start_time`/`end_time` không được feed vào model
-- MAL reset state ở đầu mỗi dialogue
-- MAL dùng read-before-write: classify bằng memory cũ rồi mới update state
+- CDM reset state ở đầu mỗi dialogue
+- CDM dùng read-before-write: classify bằng memory cũ rồi mới update state
 - temporal vector là zero vector, `temporal_feature_dim: 16`
 - checkpoint tốt nhất chọn theo validation UA
 
 Outputs:
 
 ```text
-results/wavlm_mal_no_tim/metrics.json
-results/wavlm_mal_no_tim/predictions.csv
-results/wavlm_mal_no_tim/config.json
-results/wavlm_mal_no_tim/confusion_matrix.csv
-results/wavlm_mal_no_tim/confusion_matrix.png
-results/wavlm_mal_no_tim/best.pth
-results/wavlm_mal_no_tim/last.pth
+results/wavlm_cdm_no_cim/metrics.json
+results/wavlm_cdm_no_cim/predictions.csv
+results/wavlm_cdm_no_cim/config.json
+results/wavlm_cdm_no_cim/confusion_matrix.csv
+results/wavlm_cdm_no_cim/confusion_matrix.png
+results/wavlm_cdm_no_cim/best.pth
+results/wavlm_cdm_no_cim/last.pth
 ```
 
-## Experiment 3 - WavLM + TIM
+## Experiment 3 - WavLM + CIM
 
 Đây là real-temporal-vector version để so sánh trực tiếp với Experiment 2.
 
 ```bash
-./scripts/train_wavlm_tim.sh
+./scripts/train_wavlm_cim.sh
 ```
 
 Config YAML:
 
 ```text
-configs/wavlm_tim.yaml
+configs/wavlm_cim.yaml
 ```
 
 Mặc định:
@@ -137,21 +137,21 @@ Mặc định:
 - continuous temporal features normalize bằng train split stats only
 - binary flags không normalize
 - `turn_index_norm = turn_index / max_train_dialogue_length`
-- TIM memory dùng read-before-write và reset state theo dialogue
+- CIM memory dùng read-before-write và reset state theo dialogue
 - checkpoint tốt nhất chọn theo validation UA
 
 Outputs:
 
 ```text
-results/wavlm_tim/metrics.json
-results/wavlm_tim/predictions.csv
-results/wavlm_tim/config.json
-results/wavlm_tim/temporal_feature_stats.json
-results/wavlm_tim/confusion_matrix.csv
-results/wavlm_tim/confusion_matrix.png
-results/wavlm_tim/subset_metrics.json
-results/wavlm_tim/best.pth
-results/wavlm_tim/last.pth
+results/wavlm_cim/metrics.json
+results/wavlm_cim/predictions.csv
+results/wavlm_cim/config.json
+results/wavlm_cim/temporal_feature_stats.json
+results/wavlm_cim/confusion_matrix.csv
+results/wavlm_cim/confusion_matrix.png
+results/wavlm_cim/subset_metrics.json
+results/wavlm_cim/best.pth
+results/wavlm_cim/last.pth
 ```
 
 ## Legacy B0 - Utterance-Level Baseline
@@ -283,6 +283,6 @@ Output gồm emotion dự đoán, confidence, và probability từng class.
 
 ## Cấu trúc
 
-- `models/`: model definitions, gồm `models/wavlm_baseline.py`, `models/wavlm_mal.py`, `models/wavlm_tim.py`.
+- `models/`: model definitions, gồm `models/wavlm_baseline.py`, `models/wavlm_cdm.py`, `models/wavlm_cim.py`.
 - `utils/`: config, Kaggle IEMOCAP parser, dataset loader, metrics, dialogue embedding helpers, temporal feature helpers.
 - `scripts/`: train/evaluate/infer/export/upload/download implementations và shell entrypoints.

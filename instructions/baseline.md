@@ -1,6 +1,6 @@
 You are a Codex agent working on a PyTorch research codebase for conversational Speech Emotion Recognition (SER).
 
-Implement Experiment 1: Baseline WavLM SER model with NO MAL and NO TIM.
+Implement Experiment 1: Baseline WavLM SER model with NO CDM and NO CIM.
 
 Goal:
 Build a clean utterance-level SER baseline:
@@ -12,7 +12,7 @@ Build a clean utterance-level SER baseline:
 - No temporal interaction modeling.
 - Output: utterance-level emotion classification.
 
-This experiment will be used as the control condition for later MAL and TIM experiments, so the implementation must be modular and reproducible.
+This experiment will be used as the control condition for later CDM and CIM experiments, so the implementation must be modular and reproducible.
 
 Dataset assumptions:
 Each sample should contain at least:
@@ -154,7 +154,7 @@ But the code should allow:
 
 3. Training
    Implement a training script or config entry for:
-   `experiment_name = wavlm_baseline_no_mal_no_tim`
+   `experiment_name = wavlm_baseline_no_cdm_no_cim`
 
 Use yaml config.
 
@@ -184,7 +184,7 @@ Default hyperparameters:
 
 Save outputs:
 
-- `results/wavlm_baseline_no_mal_no_tim/metrics.json`
+- `results/wavlm_baseline_no_cdm_no_cim/metrics.json`
     metrics.json should include
 
     epoch
@@ -196,8 +196,8 @@ Save outputs:
     per-class precision
     per-class recall
     per-class F1
-- `results/wavlm_baseline_no_mal_no_tim/predictions.csv`
-- `results/wavlm_baseline_no_mal_no_tim/config.json`
+- `results/wavlm_baseline_no_cdm_no_cim/predictions.csv`
+- `results/wavlm_baseline_no_cdm_no_cim/config.json`
 -  Save:
     best.pth according to the best validation UA
     last.pth
@@ -236,7 +236,7 @@ Save outputs:
 
 - Training runs end-to-end on the selected dataset.
 - Evaluation produces WA, UA, WF1, Macro-F1.
-- The model does not use timestamps, speakers, dialogue history, MAL, or TIM.
+- The model does not use timestamps, speakers, dialogue history, CDM, or CIM.
 - The dataset and metadata are loaded consistently for later experiments.
 - Results are saved in the specified directory.
 
@@ -244,8 +244,8 @@ Save outputs:
 
 The implementation should be modular because later experiments will introduce:
 
-- MAL
-- TIM
+- CDM
+- CIM
 - Test-time adaptation
 
 Therefore:

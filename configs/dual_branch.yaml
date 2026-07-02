@@ -1,5 +1,5 @@
 run_name: dual_branch_3phase_fair_ablation_loso
-experiment_name: wavlm_dual_branch_tim_3phase_fair_ablation_loso
+experiment_name: wavlm_dual_branch_cim_3phase_fair_ablation_loso
 output_dir: results/fair_ablation_loso/wavlm_dual_branch_3phase
 seed: 42
 

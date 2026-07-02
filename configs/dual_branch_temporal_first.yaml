@@ -1,5 +1,5 @@
 run_name: dual_branch_temporal_first_fair_ablation_loso
-experiment_name: wavlm_dual_branch_tim_temporal_first_fair_ablation_loso
+experiment_name: wavlm_dual_branch_cim_temporal_first_fair_ablation_loso
 output_dir: results/ablation_model_loso/wavlm_dual_branch_temporal_first
 seed: 42
 

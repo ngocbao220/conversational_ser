@@ -56,9 +56,9 @@ def save_temporal_subset_metrics(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Evaluate TIM predictions on temporal subsets.")
-    parser.add_argument("--predictions", default="results/wavlm_tim/predictions.csv")
-    parser.add_argument("--output", default="results/wavlm_tim/subset_metrics.json")
+    parser = argparse.ArgumentParser(description="Evaluate CIM predictions on temporal subsets.")
+    parser.add_argument("--predictions", default="results/wavlm_cim/predictions.csv")
+    parser.add_argument("--output", default="results/wavlm_cim/subset_metrics.json")
     parser.add_argument("--strong-overlap-threshold", type=float, default=0.25)
     args = parser.parse_args()
     save_temporal_subset_metrics(

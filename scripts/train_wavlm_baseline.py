@@ -309,8 +309,8 @@ def save_checkpoint(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train a fixed mean-pooled WavLM embedding baseline without MAL/TIM.")
-    parser.add_argument("--config", default="configs/wavlm_baseline_no_mal_no_tim.yaml")
+    parser = argparse.ArgumentParser(description="Train a fixed mean-pooled WavLM embedding baseline without CDM/CIM.")
+    parser.add_argument("--config", default="configs/wavlm_baseline_no_cdm_no_cim.yaml")
     add_dataset_override_args(parser)
     args = parser.parse_args()
 
@@ -323,7 +323,7 @@ def main() -> None:
         print(f"cross_session_summary={summary_path}")
         return
     if str(config["model"].get("pooling", "mean")) != "mean":
-        raise ValueError("Cached baseline requires model.pooling=mean to match MAL/TIM embeddings.")
+        raise ValueError("Cached baseline requires model.pooling=mean to match CDM/CIM embeddings.")
     set_seed(int(config.get("seed", 42)))
     output_dir = Path(config["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)

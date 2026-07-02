@@ -14,13 +14,13 @@ Goal
 
 Analyze prediction behavior of:
 
-1. MAL / dialogue-only model
-2. old TIM if available
+1. CDM / dialogue-only model
+2. old CIM if available
 3. dual_branch model
 
 The goal is to answer:
 
-- In which cases does dual_branch improve over MAL?
+- In which cases does dual_branch improve over CDM?
 - In which cases does dual_branch hurt?
 - Which emotion classes benefit most?
 - Which temporal interaction patterns are associated with improvement?
@@ -34,11 +34,11 @@ Input files
 
 The notebook should automatically look for these files:
 
-MAL predictions:
-results/wavlm_mal_no_tim/predictions.csv
+CDM predictions:
+results/wavlm_cdm_no_cim/predictions.csv
 
-Old TIM predictions:
-results/wavlm_tim/predictions.csv
+Old CIM predictions:
+results/wavlm_cim/predictions.csv
 
 Dual Branch predictions:
 results/dual_branch/predictions.csv
@@ -121,7 +121,7 @@ dialogue_id, speaker_id, start_time, end_time.
 3. Merge model predictions
 --------------------------------------------------
 
-Merge MAL, TIM, and dual_branch by:
+Merge CDM, CIM, and dual_branch by:
 - dialogue_id
 - utterance_id
 
@@ -131,13 +131,13 @@ Verify:
 - no missing critical fields
 
 Create columns:
-- mal_correct
-- tim_correct if TIM exists
+- cdm_correct
+- cim_correct if CIM exists
 - dual_correct
-- dual_improves_over_mal:
-    MAL wrong, Dual correct
-- dual_hurts_vs_mal:
-    MAL correct, Dual wrong
+- dual_improves_over_cdm:
+    CDM wrong, Dual correct
+- dual_hurts_vs_cdm:
+    CDM correct, Dual wrong
 - both_correct
 - both_wrong
 
@@ -168,10 +168,10 @@ Plot bar chart for:
 5. Error taxonomy
 --------------------------------------------------
 
-Create error categories comparing MAL vs Dual:
+Create error categories comparing CDM vs Dual:
 
-A. MAL wrong, Dual correct
-B. MAL correct, Dual wrong
+A. CDM wrong, Dual correct
+B. CDM correct, Dual wrong
 C. both correct
 D. both wrong
 
@@ -189,7 +189,7 @@ Plots:
 - stacked bar by emotion
 - confusion transition heatmap:
     gold_label x category
-- MAL pred -> Dual pred transitions for cases where they differ
+- CDM pred -> Dual pred transitions for cases where they differ
 
 --------------------------------------------------
 6. Temporal interaction score
@@ -224,7 +224,7 @@ Also support fixed-rule bins:
   is_overlap, is_interrupting_prev, short_response, long_pause
 
 Analyze:
-- MAL vs Dual metrics by interaction bin
+- CDM vs Dual metrics by interaction bin
 - dual improvement rate by interaction bin
 - dual hurt rate by interaction bin
 
@@ -242,8 +242,8 @@ Plots:
 
 Compare feature distributions across:
 
-- MAL wrong / Dual correct
-- MAL correct / Dual wrong
+- CDM wrong / Dual correct
+- CDM correct / Dual wrong
 - both correct
 - both wrong
 
@@ -292,8 +292,8 @@ If available, analyze:
 
 Questions:
 - Does temporal residual become larger in high-interaction cases?
-- Is temporal residual larger when Dual improves over MAL?
-- Is temporal residual too large when Dual hurts MAL?
+- Is temporal residual larger when Dual improves over CDM?
+- Is temporal residual too large when Dual hurts CDM?
 - Which emotion classes rely more on temporal branch?
 
 Save:
@@ -311,14 +311,14 @@ Plots:
 --------------------------------------------------
 
 For each emotion class:
-- MAL recall
+- CDM recall
 - Dual recall
 - gain in recall
-- MAL F1
+- CDM F1
 - Dual F1
 - gain in F1
-- number of MAL wrong / Dual correct
-- number of MAL correct / Dual wrong
+- number of CDM wrong / Dual correct
+- number of CDM correct / Dual wrong
 
 Save:
 results/dual_branch/analysis/emotion_wise_gain.csv
@@ -332,22 +332,22 @@ Plot:
 --------------------------------------------------
 
 Create confusion matrices for:
-- MAL
+- CDM
 - Dual
-- TIM if available
+- CIM if available
 
 Also create delta confusion:
 
-delta = confusion_dual - confusion_mal
+delta = confusion_dual - confusion_cdm
 
 Interpretation:
 - Negative off-diagonal values mean Dual reduces that error type.
 - Positive off-diagonal values mean Dual increases that error type.
 
 Save:
-results/dual_branch/analysis/confusion_mal.csv
+results/dual_branch/analysis/confusion_cdm.csv
 results/dual_branch/analysis/confusion_dual.csv
-results/dual_branch/analysis/confusion_delta_dual_minus_mal.csv
+results/dual_branch/analysis/confusion_delta_dual_minus_cdm.csv
 
 Plots:
 - confusion matrix heatmaps
@@ -363,7 +363,7 @@ Create four CSVs:
 
 1. dual_improves_cases.csv
 Cases where:
-- MAL wrong
+- CDM wrong
 - Dual correct
 - high interaction_score
 Sort by:
@@ -372,7 +372,7 @@ Sort by:
 
 2. dual_hurts_cases.csv
 Cases where:
-- MAL correct
+- CDM correct
 - Dual wrong
 Sort by:
 - high temporal_residual_norm
@@ -380,14 +380,14 @@ Sort by:
 
 3. both_wrong_high_interaction_cases.csv
 Cases where:
-- MAL wrong
+- CDM wrong
 - Dual wrong
 - high interaction_score
 
 4. low_interaction_no_gain_cases.csv
 Cases where:
 - low interaction_score
-- MAL and Dual predictions are the same or both correct
+- CDM and Dual predictions are the same or both correct
 
 Columns should include:
 - dialogue_id
@@ -396,9 +396,9 @@ Columns should include:
 - start_time
 - end_time
 - gold_label
-- mal_pred_label
+- cdm_pred_label
 - dual_pred_label
-- tim_pred_label if available
+- cim_pred_label if available
 - duration
 - gap_prev
 - overlap_prev
@@ -436,7 +436,7 @@ It should show:
 - annotate:
   - utterance_id
   - gold label
-  - MAL pred
+  - CDM pred
   - Dual pred
   - overlap regions if possible
 
@@ -459,8 +459,8 @@ If model cannot be rerun, skip.
 
 B. Statistical association:
 For each temporal feature, compute:
-- correlation with dual_improves_over_mal
-- correlation with dual_hurts_vs_mal
+- correlation with dual_improves_over_cdm
+- correlation with dual_hurts_vs_cdm
 - mutual information if available
 
 Save:
@@ -477,7 +477,7 @@ results/dual_branch/analysis/dual_branch_error_analysis_report.md
 The report should include:
 
 1. Overall finding
-2. Whether Dual improves over MAL
+2. Whether Dual improves over CDM
 3. Which emotions benefit most
 4. Which temporal interaction subsets benefit most
 5. Which cases Dual hurts
@@ -510,7 +510,7 @@ The notebook is correct if:
 
 1. It loads available prediction files.
 2. It merges predictions by dialogue_id and utterance_id.
-3. It computes error taxonomy comparing MAL and Dual.
+3. It computes error taxonomy comparing CDM and Dual.
 4. It computes temporal interaction score.
 5. It analyzes feature distributions by error category.
 6. It analyzes residual/gate contribution if available.

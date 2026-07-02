@@ -14,7 +14,7 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "trainer_module": "scripts.train_wavlm_baseline",
         "experiment_name": "baseline_wavlm",
         "model_remove_keys": [
-            "use_mal_memory",
+            "use_cdm_memory",
             "use_temporal_features",
             "temporal_feature_mode",
             "temporal_input_mode",
@@ -42,12 +42,12 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "model_overrides": {},
         "training_stage": None,
     },
-    "mal": {
-        "name": "mal_wavlm",
-        "trainer_module": "scripts.train_wavlm_mal",
-        "experiment_name": "mal_wavlm",
+    "cdm": {
+        "name": "cdm_wavlm",
+        "trainer_module": "scripts.train_wavlm_cdm",
+        "experiment_name": "cdm_wavlm",
         "model_remove_keys": [
-            "use_mal_memory",
+            "use_cdm_memory",
             "temporal_emb_dim",
             "temporal_input_mode",
             "disabled_temporal_feature_groups",
@@ -76,9 +76,9 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "training_stage": None,
     },
     "1": {
-        "name": "v1_tim_concat",
-        "trainer_module": "scripts.train_wavlm_tim",
-        "experiment_name": "v1_tim_concat",
+        "name": "v1_cim_concat",
+        "trainer_module": "scripts.train_wavlm_cim",
+        "experiment_name": "v1_cim_concat",
         "model_overrides": {
             "temporal_feature_set": "v1",
             "temporal_feature_dim": 16,
@@ -136,9 +136,9 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         },
     },
     "3.1": {
-        "name": "v3_1_tim_recommended_v2",
-        "trainer_module": "scripts.train_wavlm_tim",
-        "experiment_name": "v3_1_tim_recommended_v2",
+        "name": "v3_1_cim_recommended_v2",
+        "trainer_module": "scripts.train_wavlm_cim",
+        "experiment_name": "v3_1_cim_recommended_v2",
         "model_overrides": {
             "temporal_feature_set": "recommended_v2",
             "temporal_feature_dim": 36,
@@ -147,9 +147,9 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "training_stage": None,
     },
     "3.2": {
-        "name": "v3_2_tim_compact_primitives",
-        "trainer_module": "scripts.train_wavlm_tim",
-        "experiment_name": "v3_2_tim_compact_primitives",
+        "name": "v3_2_cim_compact_primitives",
+        "trainer_module": "scripts.train_wavlm_cim",
+        "experiment_name": "v3_2_cim_compact_primitives",
         "model_overrides": {
             "temporal_feature_set": "selected_primitives",
             "temporal_feature_dim": 12,
@@ -264,7 +264,7 @@ def base_config() -> dict[str, Any]:
         "model": {
             "wavlm_model_name": "microsoft/wavlm-base",
             "num_labels": 4,
-            "use_mal_memory": True,
+            "use_cdm_memory": True,
             "use_temporal_features": True,
             "temporal_feature_mode": "real",
             "temporal_input_mode": "real",

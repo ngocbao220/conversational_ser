@@ -1,5 +1,5 @@
 run_name: dual_branch_end2end_fair_ablation_loso
-experiment_name: wavlm_dual_branch_tim_end2end_fair_ablation_loso
+experiment_name: wavlm_dual_branch_cim_end2end_fair_ablation_loso
 output_dir: results/ablation_model_loso/wavlm_dual_branch_end2end
 seed: 42
 

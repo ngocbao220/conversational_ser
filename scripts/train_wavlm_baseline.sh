@@ -15,6 +15,6 @@ if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
   fi
 fi
 
-CONFIG_PATH="${1:-${CONFIG_PATH:-configs/wavlm_baseline_no_mal_no_tim.yaml}}"
+CONFIG_PATH="${1:-${CONFIG_PATH:-configs/wavlm_baseline_no_cdm_no_cim.yaml}}"
 
 "$PYTHON_BIN" -m scripts.train_wavlm_baseline --config "$CONFIG_PATH"

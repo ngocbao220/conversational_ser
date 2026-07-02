@@ -17,10 +17,10 @@ LABELS = ["angry", "happy", "neutral", "sad"]
 
 MODEL_DIRS = {
     "Baseline": "baseline_wavlm",
-    "MAL": "mal_wavlm",
-    "TIM v1 concat": "v1_tim_concat",
-    "TIM v3.1 recommended": "v3_1_tim_recommended_v2",
-    "TIM v3.2 compact": "v3_2_tim_compact_primitives",
+    "CDM": "cdm_wavlm",
+    "CIM v1 concat": "v1_cim_concat",
+    "CIM v3.1 recommended": "v3_1_cim_recommended_v2",
+    "CIM v3.2 compact": "v3_2_cim_compact_primitives",
     "Dual v2.1 end2end": "v2_1_dual_end2end",
     "Dual v2.2.1 3phase": "v2_2_1_dual_dialogue_temporal_fuse",
     "Dual v2.2.2 temporal-first": "v2_2_2_dual_temporal_dialogue_fuse",
@@ -233,22 +233,22 @@ def build_gain_tables(dialogues: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFra
     joined = dialogues.merge(wide_acc.add_suffix("_accuracy"), left_on="dialogue_id", right_index=True, how="left")
     joined = joined.merge(wide_f1.add_suffix("_macro_f1"), left_on="dialogue_id", right_index=True, how="left")
     for model in MODEL_DIRS:
-        if model == "MAL":
+        if model == "CDM":
             continue
-        if f"{model}_accuracy" in joined and "MAL_accuracy" in joined:
-            joined[f"{model}_accuracy_gain_vs_MAL"] = joined[f"{model}_accuracy"] - joined["MAL_accuracy"]
-        if f"{model}_macro_f1" in joined and "MAL_macro_f1" in joined:
-            joined[f"{model}_macro_f1_gain_vs_MAL"] = joined[f"{model}_macro_f1"] - joined["MAL_macro_f1"]
+        if f"{model}_accuracy" in joined and "CDM_accuracy" in joined:
+            joined[f"{model}_accuracy_gain_vs_CDM"] = joined[f"{model}_accuracy"] - joined["CDM_accuracy"]
+        if f"{model}_macro_f1" in joined and "CDM_macro_f1" in joined:
+            joined[f"{model}_macro_f1_gain_vs_CDM"] = joined[f"{model}_macro_f1"] - joined["CDM_macro_f1"]
     return model_dialogues, joined
 
 
 def summarize_gain_by_tii(gain_dialogues: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for model in MODEL_DIRS:
-        if model == "MAL":
+        if model == "CDM":
             continue
         for metric in ["accuracy", "macro_f1"]:
-            gain_col = f"{model}_{metric}_gain_vs_MAL"
+            gain_col = f"{model}_{metric}_gain_vs_CDM"
             if gain_col not in gain_dialogues:
                 continue
             valid = gain_dialogues.dropna(subset=[gain_col, "TII_z", "TII_level"])
@@ -264,7 +264,7 @@ def summarize_gain_by_tii(gain_dialogues: pd.DataFrame) -> pd.DataFrame:
                         "n_dialogues": len(group),
                         "mean_gain": float(group[gain_col].mean()),
                         "median_gain": float(group[gain_col].median()),
-                        "win_rate_vs_MAL": float((group[gain_col] > 0).mean()),
+                        "win_rate_vs_CDM": float((group[gain_col] > 0).mean()),
                         "spearman_tii_gain": float(corr) if np.isfinite(corr) else np.nan,
                     }
                 )
@@ -309,11 +309,11 @@ def write_report(session_tii: pd.DataFrame, gain_summary: pd.DataFrame, corr_row
         "",
         session_tii.to_markdown(index=False),
         "",
-        "## TIM Gain by TII Level",
+        "## CIM Gain by TII Level",
         "",
         gain_summary.to_markdown(index=False) if not gain_summary.empty else "No gain summary available.",
         "",
-        "## Correlation: Session TII vs TIM Gain",
+        "## Correlation: Session TII vs CIM Gain",
         "",
         corr_rows.to_markdown(index=False) if not corr_rows.empty else "No correlation table available.",
     ]
@@ -357,10 +357,10 @@ def main() -> None:
         session_gain = session_gain.merge(session_tii[["session", "TII_z_mean", "TII_percentile_mean"]], on="session", how="left")
         session_gain.to_csv(OUT_DIR / "session_tii_gain.csv", index=False)
         for model in MODEL_DIRS:
-            if model == "MAL":
+            if model == "CDM":
                 continue
             for metric in ["accuracy", "macro_f1"]:
-                col = f"{model}_{metric}_gain_vs_MAL"
+                col = f"{model}_{metric}_gain_vs_CDM"
                 if col in session_gain:
                     corr = session_gain[["TII_z_mean", col]].corr(method="spearman").iloc[0, 1]
                     corr_rows.append({"model": model, "metric": metric, "spearman_session_tii_gain": corr})

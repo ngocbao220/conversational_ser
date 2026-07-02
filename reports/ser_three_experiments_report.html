@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Báo cáo SER: WavLM Baseline, MAL, TIM</title>
+  <title>Báo cáo SER: WavLM Baseline, CDM, CIM</title>
   <style>
     :root {
       --bg: #f7f8fa;
@@ -200,7 +200,7 @@
     <header>
       <h1>Báo cáo thí nghiệm SER trên IEMOCAP</h1>
       <p class="muted">
-        So sánh ba mô hình: WavLM baseline, WavLM + MAL, và WavLM + TIM.
+        So sánh ba mô hình: WavLM baseline, WavLM + CDM, và WavLM + CIM.
         Kết quả lấy từ thư mục <code>outputs/hf_checkpoints/</code>.
       </p>
       <p>
@@ -223,11 +223,11 @@
           Audio utterance độc lập. Không dùng memory, speaker, timestamp, hay đặc trưng temporal trong model.
         </div>
         <div class="tile">
-          <strong>Experiment 2: WavLM + MAL</strong>
+          <strong>Experiment 2: WavLM + CDM</strong>
           Dùng embedding WavLM cố định và memory theo thứ tự utterance trong từng dialogue. Không dùng timing thật.
         </div>
         <div class="tile">
-          <strong>Experiment 3: WavLM + TIM</strong>
+          <strong>Experiment 3: WavLM + CIM</strong>
           Giữ memory như Exp 2, thêm temporal interaction features tính causal từ start/end time và speaker history.
         </div>
       </div>
@@ -307,11 +307,11 @@
       <h2>3. Kiến trúc mô hình</h2>
       <img class="diagram" src="architecture_overview.svg" alt="Overview pipeline của ba kiến trúc SER">
       <p class="caption">
-        Hình 1. Tổng quan khác biệt chính giữa ba thí nghiệm: baseline chỉ dùng audio, MAL thêm memory hội thoại,
-        TIM thêm temporal interaction features vào memory.
+        Hình 1. Tổng quan khác biệt chính giữa ba thí nghiệm: baseline chỉ dùng audio, CDM thêm memory hội thoại,
+        CIM thêm temporal interaction features vào memory.
       </p>
 
-      <h3>Experiment 1: WavLM baseline no MAL no TIM</h3>
+      <h3>Experiment 1: WavLM baseline no CDM no CIM</h3>
       <img class="diagram" src="baseline_pipeline.svg" alt="Pipeline của WavLM baseline">
       <p class="caption">
         Hình 2. Baseline là utterance-level classifier: metadata được lưu để trace kết quả nhưng không đi vào forward pass.
@@ -325,24 +325,24 @@
         <li>Mặc định WavLM frozen, chỉ train pooling/classifier head.</li>
       </ul>
 
-      <h3>Experiment 2: WavLM + MAL no TIM</h3>
-      <img class="diagram" src="mal_pipeline.svg" alt="Pipeline của WavLM cộng MAL">
+      <h3>Experiment 2: WavLM + CDM no CIM</h3>
+      <img class="diagram" src="cdm_pipeline.svg" alt="Pipeline của WavLM cộng CDM">
       <p class="caption">
-        Hình 3. MAL đọc memory state trước khi update, reset theo dialogue boundary, và chỉ nhận zero temporal vector.
+        Hình 3. CDM đọc memory state trước khi update, reset theo dialogue boundary, và chỉ nhận zero temporal vector.
       </p>
       <ul>
         <li>WavLM được dùng để precompute fixed mean-pooled utterance embeddings.</li>
         <li>Utterance được group theo dialogue và sort theo <code>start_time</code>, <code>end_time</code>, <code>utterance_id</code>.</li>
-        <li>MAL memory dùng GRUCell, reset state ở đầu mỗi dialogue.</li>
+        <li>CDM memory dùng GRUCell, reset state ở đầu mỗi dialogue.</li>
         <li>Memory là causal/read-before-write: dự đoán utterance hiện tại đọc memory cũ trước, sau đó mới update state.</li>
         <li>Temporal interface vẫn tồn tại nhưng nhận vector zero 16 chiều.</li>
         <li>Không tính duration, gap, overlap, interruption, hoặc speaker feature thật làm input.</li>
       </ul>
 
-      <h3>Experiment 3: WavLM + TIM</h3>
-      <img class="diagram" src="tim_pipeline.svg" alt="Pipeline của WavLM cộng TIM">
+      <h3>Experiment 3: WavLM + CIM</h3>
+      <img class="diagram" src="cim_pipeline.svg" alt="Pipeline của WavLM cộng CIM">
       <p class="caption">
-        Hình 4. TIM thay zero vector bằng temporal features causal, encode bằng MLP rồi concat với WavLM embedding trước memory.
+        Hình 4. CIM thay zero vector bằng temporal features causal, encode bằng MLP rồi concat với WavLM embedding trước memory.
       </p>
       <ul>
         <li>Giữ setup embedding và memory gần giống Exp 2 để so sánh công bằng.</li>
@@ -353,7 +353,7 @@
         <li>Các đặc trưng speaker habit được tính causal từ lịch sử trước đó của speaker, không dùng tương lai.</li>
       </ul>
 
-      <h3>16 temporal features của TIM</h3>
+      <h3>16 temporal features của CIM</h3>
       <table>
         <thead>
           <tr>
@@ -390,16 +390,16 @@
           <tr>
             <th>Thành phần</th>
             <th>Exp 1: Baseline</th>
-            <th>Exp 2: MAL</th>
-            <th>Exp 3: TIM</th>
+            <th>Exp 2: CDM</th>
+            <th>Exp 3: CIM</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>Output dir của kết quả đang phân tích</td>
-            <td><code>outputs/hf_checkpoints/wavlm_baseline_no_mal_no_tim</code></td>
-            <td><code>outputs/hf_checkpoints/wavlm_mal_no_tim</code></td>
-            <td><code>outputs/hf_checkpoints/wavlm_tim</code></td>
+            <td><code>outputs/hf_checkpoints/wavlm_baseline_no_cdm_no_cim</code></td>
+            <td><code>outputs/hf_checkpoints/wavlm_cdm_no_cim</code></td>
+            <td><code>outputs/hf_checkpoints/wavlm_cim</code></td>
           </tr>
           <tr>
             <td>Checkpoint selection</td>
@@ -454,7 +454,7 @@
             <td class="num">50.12</td>
           </tr>
           <tr>
-            <td>WavLM + MAL no TIM</td>
+            <td>WavLM + CDM no CIM</td>
             <td class="num">71</td>
             <td class="num">0.8824</td>
             <td class="num">70.75</td>
@@ -463,7 +463,7 @@
             <td class="num">70.61</td>
           </tr>
           <tr>
-            <td><strong>WavLM + TIM</strong></td>
+            <td><strong>WavLM + CIM</strong></td>
             <td class="num">35</td>
             <td class="num best">0.7654</td>
             <td class="num best">73.25</td>
@@ -485,15 +485,15 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td>MAL vs baseline</td><td class="num">+20.39</td><td class="num">+19.06</td><td class="num">+20.82</td><td class="num">+20.49</td></tr>
-          <tr><td>TIM vs baseline</td><td class="num">+22.88</td><td class="num">+20.44</td><td class="num">+23.62</td><td class="num">+23.14</td></tr>
-          <tr><td>TIM vs MAL</td><td class="num">+2.50</td><td class="num">+1.39</td><td class="num">+2.80</td><td class="num">+2.65</td></tr>
+          <tr><td>CDM vs baseline</td><td class="num">+20.39</td><td class="num">+19.06</td><td class="num">+20.82</td><td class="num">+20.49</td></tr>
+          <tr><td>CIM vs baseline</td><td class="num">+22.88</td><td class="num">+20.44</td><td class="num">+23.62</td><td class="num">+23.14</td></tr>
+          <tr><td>CIM vs CDM</td><td class="num">+2.50</td><td class="num">+1.39</td><td class="num">+2.80</td><td class="num">+2.65</td></tr>
         </tbody>
       </table>
 
       <p>
         Kết quả tổng thể cho thấy memory theo dialogue tạo ra bước nhảy lớn so với baseline utterance-level.
-        TIM tiếp tục cải thiện trên MAL, nhưng mức tăng nhỏ hơn nhiều so với bước tăng từ baseline sang MAL.
+        CIM tiếp tục cải thiện trên CDM, nhưng mức tăng nhỏ hơn nhiều so với bước tăng từ baseline sang CDM.
       </p>
     </section>
 
@@ -511,13 +511,13 @@
         </thead>
         <tbody>
           <tr><td>Baseline</td><td class="num">50.66</td><td class="num">48.78</td><td class="num">52.56</td><td class="num">48.36</td></tr>
-          <tr><td>MAL</td><td class="num">75.98</td><td class="num">70.81</td><td class="num">71.19</td><td class="num">65.64</td></tr>
-          <tr><td>TIM</td><td class="num best">81.00</td><td class="num best">74.18</td><td class="num best">72.98</td><td class="num best">66.67</td></tr>
+          <tr><td>CDM</td><td class="num">75.98</td><td class="num">70.81</td><td class="num">71.19</td><td class="num">65.64</td></tr>
+          <tr><td>CIM</td><td class="num best">81.00</td><td class="num best">74.18</td><td class="num best">72.98</td><td class="num best">66.67</td></tr>
         </tbody>
       </table>
 
       <p>
-        TIM đạt F1 cao nhất ở cả bốn class. Class <code>sad</code> vẫn là class khó nhất trong hai model memory,
+        CIM đạt F1 cao nhất ở cả bốn class. Class <code>sad</code> vẫn là class khó nhất trong hai model memory,
         còn baseline gần như không phân biệt tốt class nào.
       </p>
     </section>
@@ -525,9 +525,9 @@
     <section class="section">
       <h2>7. Subset metrics theo model</h2>
       <p>
-        Bảng dưới đây được sắp theo đúng nhóm model: 6 dòng Baseline, 6 dòng MAL, 6 dòng TIM.
-        Các subset được định nghĩa từ temporal columns trong <code>wavlm_tim/predictions.csv</code> và join qua <code>utterance_id</code>
-        để chấm lại baseline/MAL trên cùng tập utterance.
+        Bảng dưới đây được sắp theo đúng nhóm model: 6 dòng Baseline, 6 dòng CDM, 6 dòng CIM.
+        Các subset được định nghĩa từ temporal columns trong <code>wavlm_cim/predictions.csv</code> và join qua <code>utterance_id</code>
+        để chấm lại baseline/CDM trên cùng tập utterance.
       </p>
 
       <table>
@@ -550,19 +550,19 @@
           <tr><td>Baseline</td><td>long_pause</td><td class="num">416</td><td class="num">50.48</td><td class="num">50.49</td><td class="num">49.11</td><td class="num">49.49</td></tr>
           <tr><td>Baseline</td><td>speaker_switch</td><td class="num">739</td><td class="num">50.34</td><td class="num">52.35</td><td class="num">50.14</td><td class="num">50.38</td></tr>
 
-          <tr class="group-start"><td>MAL</td><td>no_overlap</td><td class="num">683</td><td class="num">69.40</td><td class="num">69.08</td><td class="num">68.63</td><td class="num">68.99</td></tr>
-          <tr><td>MAL</td><td>overlap</td><td class="num">558</td><td class="num">72.40</td><td class="num">74.13</td><td class="num">73.25</td><td class="num">72.77</td></tr>
-          <tr><td>MAL</td><td>strong_overlap</td><td class="num">241</td><td class="num">73.03</td><td class="num best">72.82</td><td class="num best">71.91</td><td class="num">73.62</td></tr>
-          <tr><td>MAL</td><td>short_response</td><td class="num">132</td><td class="num">73.48</td><td class="num best">79.66</td><td class="num">69.70</td><td class="num">74.55</td></tr>
-          <tr><td>MAL</td><td>long_pause</td><td class="num">416</td><td class="num">69.71</td><td class="num">67.63</td><td class="num">68.58</td><td class="num">69.11</td></tr>
-          <tr><td>MAL</td><td>speaker_switch</td><td class="num">739</td><td class="num">69.69</td><td class="num">71.80</td><td class="num">71.08</td><td class="num">70.04</td></tr>
+          <tr class="group-start"><td>CDM</td><td>no_overlap</td><td class="num">683</td><td class="num">69.40</td><td class="num">69.08</td><td class="num">68.63</td><td class="num">68.99</td></tr>
+          <tr><td>CDM</td><td>overlap</td><td class="num">558</td><td class="num">72.40</td><td class="num">74.13</td><td class="num">73.25</td><td class="num">72.77</td></tr>
+          <tr><td>CDM</td><td>strong_overlap</td><td class="num">241</td><td class="num">73.03</td><td class="num best">72.82</td><td class="num best">71.91</td><td class="num">73.62</td></tr>
+          <tr><td>CDM</td><td>short_response</td><td class="num">132</td><td class="num">73.48</td><td class="num best">79.66</td><td class="num">69.70</td><td class="num">74.55</td></tr>
+          <tr><td>CDM</td><td>long_pause</td><td class="num">416</td><td class="num">69.71</td><td class="num">67.63</td><td class="num">68.58</td><td class="num">69.11</td></tr>
+          <tr><td>CDM</td><td>speaker_switch</td><td class="num">739</td><td class="num">69.69</td><td class="num">71.80</td><td class="num">71.08</td><td class="num">70.04</td></tr>
 
-          <tr class="group-start"><td>TIM</td><td>no_overlap</td><td class="num">683</td><td class="num best">73.94</td><td class="num best">72.29</td><td class="num best">73.49</td><td class="num best">73.61</td></tr>
-          <tr><td>TIM</td><td>overlap</td><td class="num">558</td><td class="num best">72.40</td><td class="num best">74.13</td><td class="num best">73.94</td><td class="num best">72.88</td></tr>
-          <tr><td>TIM</td><td>strong_overlap</td><td class="num">241</td><td class="num best">73.86</td><td class="num">72.40</td><td class="num">71.15</td><td class="num best">74.26</td></tr>
-          <tr><td>TIM</td><td>short_response</td><td class="num">132</td><td class="num best">79.55</td><td class="num">77.40</td><td class="num best">77.38</td><td class="num best">79.65</td></tr>
-          <tr><td>TIM</td><td>long_pause</td><td class="num">416</td><td class="num best">73.32</td><td class="num best">71.06</td><td class="num best">72.52</td><td class="num best">72.88</td></tr>
-          <tr><td>TIM</td><td>speaker_switch</td><td class="num">739</td><td class="num best">70.91</td><td class="num best">72.81</td><td class="num best">72.65</td><td class="num best">71.32</td></tr>
+          <tr class="group-start"><td>CIM</td><td>no_overlap</td><td class="num">683</td><td class="num best">73.94</td><td class="num best">72.29</td><td class="num best">73.49</td><td class="num best">73.61</td></tr>
+          <tr><td>CIM</td><td>overlap</td><td class="num">558</td><td class="num best">72.40</td><td class="num best">74.13</td><td class="num best">73.94</td><td class="num best">72.88</td></tr>
+          <tr><td>CIM</td><td>strong_overlap</td><td class="num">241</td><td class="num best">73.86</td><td class="num">72.40</td><td class="num">71.15</td><td class="num best">74.26</td></tr>
+          <tr><td>CIM</td><td>short_response</td><td class="num">132</td><td class="num best">79.55</td><td class="num">77.40</td><td class="num best">77.38</td><td class="num best">79.65</td></tr>
+          <tr><td>CIM</td><td>long_pause</td><td class="num">416</td><td class="num best">73.32</td><td class="num best">71.06</td><td class="num best">72.52</td><td class="num best">72.88</td></tr>
+          <tr><td>CIM</td><td>speaker_switch</td><td class="num">739</td><td class="num best">70.91</td><td class="num best">72.81</td><td class="num best">72.65</td><td class="num best">71.32</td></tr>
         </tbody>
       </table>
 
@@ -576,28 +576,28 @@
 
       <h3>8.1 Memory là yếu tố tác động lớn nhất</h3>
       <p>
-        Chênh lệch từ baseline sang MAL rất lớn: khoảng +20 điểm ở WA, UA, Macro-F1 và WF1.
+        Chênh lệch từ baseline sang CDM rất lớn: khoảng +20 điểm ở WA, UA, Macro-F1 và WF1.
         Điều này cho thấy SER hội thoại hưởng lợi mạnh từ thứ tự utterance và trạng thái hội thoại,
         ngay cả khi chưa dùng timing thật.
       </p>
 
-      <h3>8.2 TIM cải thiện thêm nhưng không đồng đều ở mọi subset</h3>
+      <h3>8.2 CIM cải thiện thêm nhưng không đồng đều ở mọi subset</h3>
       <p>
-        TIM tốt nhất tổng thể và thắng phần lớn subset, đặc biệt ở <code>no_overlap</code>, <code>long_pause</code>,
-        và <code>speaker_switch</code>. Tuy nhiên, MAL cạnh tranh rất sát ở <code>overlap</code>,
-        và nhỉnh hơn TIM ở <code>strong_overlap</code> theo UA/Macro-F1 cũng như <code>short_response</code> theo UA.
+        CIM tốt nhất tổng thể và thắng phần lớn subset, đặc biệt ở <code>no_overlap</code>, <code>long_pause</code>,
+        và <code>speaker_switch</code>. Tuy nhiên, CDM cạnh tranh rất sát ở <code>overlap</code>,
+        và nhỉnh hơn CIM ở <code>strong_overlap</code> theo UA/Macro-F1 cũng như <code>short_response</code> theo UA.
       </p>
 
-      <h3>8.3 Short response là vùng TIM mạnh nhất theo WA/WF1</h3>
+      <h3>8.3 Short response là vùng CIM mạnh nhất theo WA/WF1</h3>
       <p>
-        Trên subset <code>short_response</code>, TIM đạt WA 79.55 và WF1 79.65, cao nhất trong các subset.
+        Trên subset <code>short_response</code>, CIM đạt WA 79.55 và WF1 79.65, cao nhất trong các subset.
         Điều này phù hợp với giả thuyết rằng response latency là tín hiệu hội thoại hữu ích cho cảm xúc.
-        Dù vậy, MAL lại có UA 79.66, nghĩa là phân bố recall theo class của MAL ở subset nhỏ này vẫn rất tốt.
+        Dù vậy, CDM lại có UA 79.66, nghĩa là phân bố recall theo class của CDM ở subset nhỏ này vẫn rất tốt.
       </p>
 
       <h3>8.4 Strong overlap còn chưa ổn định</h3>
       <p>
-        Trên <code>strong_overlap</code>, TIM có WA/WF1 tốt nhất nhưng MAL có UA/Macro-F1 tốt hơn.
+        Trên <code>strong_overlap</code>, CIM có WA/WF1 tốt nhất nhưng CDM có UA/Macro-F1 tốt hơn.
         Vì subset này chỉ có 241 mẫu, sự khác biệt có thể nhạy với phân bố class.
         Đây là nhóm nên xem confusion matrix hoặc per-class recall trước khi kết luận mạnh.
       </p>
@@ -605,7 +605,7 @@
       <h3>8.5 Lỗi chính vẫn là happy/neutral</h3>
       <p>
         Ở test tổng thể, lỗi lớn nhất của các mô hình memory vẫn là nhầm <code>happy -> neutral</code>.
-        TIM giảm nhiều lỗi cực đoan của baseline, nhưng ranh giới giữa happy và neutral vẫn là điểm yếu chính.
+        CIM giảm nhiều lỗi cực đoan của baseline, nhưng ranh giới giữa happy và neutral vẫn là điểm yếu chính.
       </p>
     </section>
 
@@ -613,14 +613,14 @@
       <h2>9. Kết luận</h2>
       <ul>
         <li>Baseline WavLM utterance-level là control hợp lệ nhưng hiệu năng thấp, quanh 50 điểm F1.</li>
-        <li>WavLM + MAL chứng minh dialogue memory tạo cải thiện lớn nhất.</li>
-        <li>WavLM + TIM là mô hình tốt nhất tổng thể, đạt WA 73.25, UA 72.91, Macro-F1 73.71 và WF1 73.26.</li>
-        <li>Temporal features có giá trị bổ sung, nhưng mức cải thiện so với MAL vừa phải và phụ thuộc subset.</li>
+        <li>WavLM + CDM chứng minh dialogue memory tạo cải thiện lớn nhất.</li>
+        <li>WavLM + CIM là mô hình tốt nhất tổng thể, đạt WA 73.25, UA 72.91, Macro-F1 73.71 và WF1 73.26.</li>
+        <li>Temporal features có giá trị bổ sung, nhưng mức cải thiện so với CDM vừa phải và phụ thuộc subset.</li>
         <li>Nhóm subset nên phân tích sâu tiếp theo: <code>strong_overlap</code>, <code>short_response</code>, và các lỗi <code>happy -> neutral</code>.</li>
       </ul>
 
       <div class="note">
-        Kết luận ngắn: nếu chỉ xét kết quả tổng thể, TIM là lựa chọn tốt nhất. Nếu xét insight khoa học,
+        Kết luận ngắn: nếu chỉ xét kết quả tổng thể, CIM là lựa chọn tốt nhất. Nếu xét insight khoa học,
         kết quả cho thấy memory hội thoại là thành phần nền tảng, còn temporal interaction features tạo thêm lợi ích
         rõ nhất ở một số tình huống hội thoại cụ thể.
       </div>

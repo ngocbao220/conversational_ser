@@ -877,7 +877,7 @@ def write_reports(
 ## Scope
 
 This study tests whether timing and turn-taking cues are associated with emotion labels in conversational SER.
-It does not train the TIM architecture. It computes temporal interaction features from dialogue timestamps and
+It does not train the CIM architecture. It computes temporal interaction features from dialogue timestamps and
 speaker turns, then evaluates distributional differences, correlation, statistical significance, redundancy,
 subset behavior, dialogue progression, and complementarity with frozen WavLM embeddings when a cache is available.
 
@@ -900,7 +900,7 @@ subset behavior, dialogue progression, and complementarity with frozen WavLM emb
 - Features with high redundancy should be represented once per group or handled by gating/attention.
 - Dataset-specific features should not be trusted as universal SER cues until they replicate across MELD and IEMOCAP.
 - If WavLM can linearly predict a temporal feature with high R2, that feature is likely redundant with acoustics.
-  Otherwise, it is a stronger candidate for complementary TIM conditioning.
+  Otherwise, it is a stronger candidate for complementary CIM conditioning.
 
 ## Complementarity
 
@@ -917,7 +917,7 @@ of the required datasets was not available locally or did not contain usable tim
 """
     (output_dir / "cross_dataset_comparison.md").write_text(cross_report, encoding="utf-8")
 
-    design = f"""# TIM Design Recommendation
+    design = f"""# CIM Design Recommendation
 
 ## Recommended Direction
 
@@ -937,14 +937,14 @@ Do not concatenate all temporal features directly. The statistical analysis supp
 ## Practical Architecture
 
 - Acoustic branch: frozen or lightly fine-tuned WavLM utterance embedding.
-- Memory branch: causal dialogue memory as in MAL.
+- Memory branch: causal dialogue memory as in CDM.
 - Temporal branch: group encoders with small MLPs, one per temporal cue group.
 - Gate: `gate_g = sigmoid(W_g [wavlm_i, memory_state_i])` for each group.
 - Fusion: `temporal_context = sum_g gate_g * encoder_g(features_g)`.
 - Regularization: group dropout and entropy penalty on gates to avoid relying on one noisy cue such as overlap alone.
 - Ablations: full, zero, shuffled, no-overlap, no-duration, no-gap, no-speaker, no-position.
 """
-    (output_dir / "tim_design_recommendation.md").write_text(design, encoding="utf-8")
+    (output_dir / "cim_design_recommendation.md").write_text(design, encoding="utf-8")
 
 
 def main() -> None:
@@ -958,7 +958,7 @@ def main() -> None:
     )
     parser.add_argument("--meld-kaggle-dataset", default="zaber666/meld-dataset")
     parser.add_argument("--output-dir", default="reports/temporal_interaction_study")
-    parser.add_argument("--embedding-cache", default="results/wavlm_tim/cache/wavlm_mean_embeddings.pt")
+    parser.add_argument("--embedding-cache", default="results/wavlm_cim/cache/wavlm_mean_embeddings.pt")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
@@ -1026,7 +1026,7 @@ def main() -> None:
         complementarity,
     )
     print(f"analysis_report={output_dir / 'analysis_report.md'}")
-    print(f"tim_design_recommendation={output_dir / 'tim_design_recommendation.md'}")
+    print(f"cim_design_recommendation={output_dir / 'cim_design_recommendation.md'}")
 
 
 if __name__ == "__main__":

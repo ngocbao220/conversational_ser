@@ -9,7 +9,7 @@ This notebook is analysis-only. Do not train the main SER models.
 Goal:
 Build a data-driven temporal feature qualification pipeline for IEMOCAP and MELD.
 
-We want to decide which temporal interaction features should be included in future TIM / Dual-Branch TIM models based on:
+We want to decide which temporal interaction features should be included in future CIM / Dual-Branch CIM models based on:
 
 1. Literature-motivated interaction phenomena
 2. Dataset feasibility
@@ -61,7 +61,7 @@ Create these sections:
 8. Complementarity with WavLM embeddings
 9. Relationship with model errors
 10. Feature qualification table
-11. Final recommendation for TIM v2
+11. Final recommendation for CIM v2
 12. Save all outputs
 
 ==================================================
@@ -484,8 +484,8 @@ Save:
 If prediction files are available, analyze whether temporal features explain improvements/errors.
 
 Try to load:
-- results/wavlm_mal_no_tim/predictions.csv
-- results/wavlm_tim/predictions.csv
+- results/wavlm_cdm_no_cim/predictions.csv
+- results/wavlm_cim/predictions.csv
 - results/dual_branch/predictions.csv
 
 Merge by:
@@ -493,16 +493,16 @@ Merge by:
 - utterance_id
 
 Create:
-- mal_correct
-- tim_correct
+- cdm_correct
+- cim_correct
 - dual_correct
-- dual_improves_over_mal
-- dual_hurts_vs_mal
+- dual_improves_over_cdm
+- dual_hurts_vs_cdm
 
 For each feature:
 - compare distribution in:
-  - MAL wrong / Dual correct
-  - MAL correct / Dual wrong
+  - CDM wrong / Dual correct
+  - CDM correct / Dual wrong
   - both correct
   - both wrong
 - compute association with improvement
@@ -513,7 +513,7 @@ Save:
 - results/feature_engineering/error_feature_analysis.csv
 - results/feature_engineering/error_feature_classwise.csv
 
-This section is important because a feature may not correlate strongly with emotion overall, but may explain where MAL fails.
+This section is important because a feature may not correlate strongly with emotion overall, but may explain where CDM fails.
 
 ==================================================
 10. Feature qualification table
@@ -566,7 +566,7 @@ complementarity_score:
 - based on temporal probe and WavLM+Temporal gain
 
 error_explanation_score:
-- based on association with dual_improves_over_mal
+- based on association with dual_improves_over_cdm
 
 Final recommendation rules:
 - Highly Recommended:
@@ -587,7 +587,7 @@ results/feature_engineering/feature_qualification_table.csv
 results/feature_engineering/recommended_features.csv
 
 ==================================================
-11. Final recommendation for TIM v2
+11. Final recommendation for CIM v2
 ==================================================
 
 Generate a Markdown report:
@@ -602,12 +602,12 @@ Report must include:
 4. Which interaction phenomena appear frequently enough
 5. Which features are statistically associated with emotion
 6. Which features are complementary to WavLM
-7. Which features explain MAL/Dual errors
-8. Recommended feature groups for TIM v2
+7. Which features explain CDM/Dual errors
+8. Recommended feature groups for CIM v2
 9. Features to remove or avoid
-10. Proposed TIM v2 design based on the evidence
+10. Proposed CIM v2 design based on the evidence
 
-Recommended TIM v2 design should include:
+Recommended CIM v2 design should include:
 - response dynamics group
 - turn-taking group
 - overlap/interruption group
@@ -643,7 +643,7 @@ The notebook is correct if:
 7. It tests association with emotion labels.
 8. It analyzes redundancy.
 9. It performs complementarity probing with WavLM embeddings if available.
-10. It analyzes relation to MAL/TIM/DualBranch errors if predictions exist.
+10. It analyzes relation to CDM/CIM/DualBranch errors if predictions exist.
 11. It produces a feature qualification table.
 12. It produces recommended_features.csv.
 13. It writes feature_engineering_report.md.

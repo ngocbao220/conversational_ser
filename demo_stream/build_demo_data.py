@@ -17,22 +17,21 @@ PREDICTION_CANDIDATES = {
     "baseline": (
         ROOT / "results" / "versioned_loso" / "baseline_wavlm" / "cross_session" / "run_20260630_091825" / "test_Ses05" / "predictions.csv"
     ),
-    "mal": (
-        ROOT / "results" / "versioned_loso" / "mal_wavlm" / "cross_session" / "run_20260630_092932" / "test_Ses05" / "predictions.csv"
+    "cdm": (
+        ROOT / "results" / "versioned_loso" / "cdm_wavlm" / "cross_session" / "run_20260630_092932" / "test_Ses05" / "predictions.csv"
     ),
-    "tim": (
-        ROOT / "results" / "versioned_loso" / "v1_tim_concat" / "cross_session" / "run_20260629_165854" / "test_Ses05" / "predictions.csv"
+    "cim_v1": (
+        ROOT / "results" / "versioned_loso" / "v1_cim_concat" / "cross_session" / "run_20260629_165854" / "test_Ses05" / "predictions.csv"
     ),
-    
-    "cim": ROOT / "results" / "cim_loso" / "branch_concat_interaction4" / "cross_session" / "run_20260701_045803" / "test_Ses05" / "predictions.csv",
+    "cim": ROOT / "results" / "cim_full_loso" / "branch_concat_interaction4" / "cross_session" / "run_20260701_045803" / "test_Ses05" / "predictions.csv",
 }
 MODEL_DISPLAY_NAMES = {
     "baseline": "WavLM baseline",
-    "mal": "WavLM + MAL",
-    "tim": "WavLM + TIM",
+    "cdm": "WavLM + CDM",
+    "cim_v1": "WavLM + CIM v1",
     "cim": "WavLM + CIM",
 }
-MODEL_ORDER = ("tim", "cim", "mal", "baseline")
+MODEL_ORDER = ("cim", "cim_v1", "cdm", "baseline")
 LABELS = ("angry", "happy", "neutral", "sad")
 TARGET_SESSIONS = {"Ses05"}
 METADATA_LABEL_MAP = {
@@ -244,51 +243,51 @@ def prediction_payload(row: dict[str, str] | None) -> dict[str, object] | None:
 
 def compare_predictions(model_predictions: dict[str, dict[str, object]], gold_label: str) -> dict[str, object]:
     baseline = model_predictions.get("baseline")
-    mal = model_predictions.get("mal")
-    tim = model_predictions.get("tim")
+    cdm = model_predictions.get("cdm")
+    cim = model_predictions.get("cim")
 
     baseline_correct = bool(baseline and baseline.get("label") == gold_label)
-    mal_correct = bool(mal and mal.get("label") == gold_label)
-    tim_correct = bool(tim and tim.get("label") == gold_label)
-    has_all_predictions = bool(baseline and mal and tim)
-    has_mal_tim_predictions = bool(mal and tim)
+    cdm_correct = bool(cdm and cdm.get("label") == gold_label)
+    cim_correct = bool(cim and cim.get("label") == gold_label)
+    has_all_predictions = bool(baseline and cdm and cim)
+    has_cdm_cim_predictions = bool(cdm and cim)
 
     if not has_all_predictions:
         outcome = "missing_prediction"
-    elif tim_correct and not baseline_correct and not mal_correct:
-        outcome = "tim_correct_baseline_mal_wrong"
-    elif tim_correct and not baseline_correct:
-        outcome = "tim_correct_baseline_wrong"
-    elif tim_correct and not mal_correct:
-        outcome = "tim_correct_mal_wrong"
-    elif tim_correct:
-        outcome = "all_or_tim_correct"
-    elif mal_correct and not tim_correct:
-        outcome = "mal_correct_tim_wrong"
-    elif baseline_correct and not tim_correct:
-        outcome = "baseline_correct_tim_wrong"
+    elif cim_correct and not baseline_correct and not cdm_correct:
+        outcome = "cim_correct_baseline_cdm_wrong"
+    elif cim_correct and not baseline_correct:
+        outcome = "cim_correct_baseline_wrong"
+    elif cim_correct and not cdm_correct:
+        outcome = "cim_correct_cdm_wrong"
+    elif cim_correct:
+        outcome = "all_or_cim_correct"
+    elif cdm_correct and not cim_correct:
+        outcome = "cdm_correct_cim_wrong"
+    elif baseline_correct and not cim_correct:
+        outcome = "baseline_correct_cim_wrong"
     else:
         outcome = "all_wrong"
 
-    if not has_mal_tim_predictions:
-        mal_tim_outcome = "missing_prediction"
-    elif tim_correct and not mal_correct:
-        mal_tim_outcome = "tim_only_correct"
-    elif mal_correct and not tim_correct:
-        mal_tim_outcome = "mal_only_correct"
-    elif tim_correct:
-        mal_tim_outcome = "both_correct"
+    if not has_cdm_cim_predictions:
+        cdm_cim_outcome = "missing_prediction"
+    elif cim_correct and not cdm_correct:
+        cdm_cim_outcome = "cim_only_correct"
+    elif cdm_correct and not cim_correct:
+        cdm_cim_outcome = "cdm_only_correct"
+    elif cim_correct:
+        cdm_cim_outcome = "both_correct"
     else:
-        mal_tim_outcome = "both_wrong"
+        cdm_cim_outcome = "both_wrong"
 
     return {
         "has_all_predictions": has_all_predictions,
-        "has_mal_tim_predictions": has_mal_tim_predictions,
+        "has_cdm_cim_predictions": has_cdm_cim_predictions,
         "baseline_correct": baseline_correct,
-        "mal_correct": mal_correct,
-        "tim_correct": tim_correct,
+        "cdm_correct": cdm_correct,
+        "cim_correct": cim_correct,
         "outcome": outcome,
-        "mal_tim_outcome": mal_tim_outcome,
+        "cdm_cim_outcome": cdm_cim_outcome,
     }
 
 
@@ -395,7 +394,7 @@ def main() -> None:
     dialogue_prediction_counts: Counter[str] = Counter()
     label_counts: Counter[str] = Counter()
     evidence_counts: Counter[str] = Counter()
-    mal_tim_counts: Counter[str] = Counter()
+    cdm_cim_counts: Counter[str] = Counter()
 
     for meta in metadata_rows:
         utterance_id = meta["utterance_id"]
@@ -415,14 +414,14 @@ def main() -> None:
             if payload:
                 model_predictions[model_name] = payload
 
-        tim_label = model_predictions.get("tim", {}).get("label", "")
-        if tim_label:
-            label_counts[str(tim_label)] += 1
+        cim_label = model_predictions.get("cim", {}).get("label", "")
+        if cim_label:
+            label_counts[str(cim_label)] += 1
             dialogue_prediction_counts[dialogue_id] += 1
 
         comparison = compare_predictions(model_predictions, gold_label)
         evidence_counts[str(comparison["outcome"])] += 1
-        mal_tim_counts[str(comparison["mal_tim_outcome"])] += 1
+        cdm_cim_counts[str(comparison["cdm_cim_outcome"])] += 1
 
         item = {
             "utterance_id": utterance_id,
@@ -484,13 +483,13 @@ def main() -> None:
         "labels": list(LABELS),
         "summary": {
             "utterance_count": len(items),
-            "predicted_utterance_count": sum(1 for item in items if item["predictions"].get("tim")),
+            "predicted_utterance_count": sum(1 for item in items if item["predictions"].get("cim")),
             "fully_compared_count": sum(1 for item in items if item["comparison"]["has_all_predictions"]),
             "dialogue_count": len(dialogue_counts),
             "session_count": len(session_counts),
-            "tim_label_counts": dict(sorted(label_counts.items())),
+            "cim_label_counts": dict(sorted(label_counts.items())),
             "evidence_counts": dict(sorted(evidence_counts.items())),
-            "mal_tim_paired_counts": dict(sorted(mal_tim_counts.items())),
+            "cdm_cim_paired_counts": dict(sorted(cdm_cim_counts.items())),
         },
         "sessions": sessions,
         "dialogues_by_session": dialogues_by_session,

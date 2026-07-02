@@ -1,21 +1,21 @@
 Verify the full implementation of the three SER experiments.
 
-Important: This is a verification task, not a new implementation task. Do not rewrite the project unless a small fix is absolutely necessary. First inspect the codebase, run checks, and produce a clear verification report.
+Important: This is a verification task, not a new implementation task. Do not rewrite the project unless a scdml fix is absolutely necessary. First inspect the codebase, run checks, and produce a clear verification report.
 
 Experiments to verify:
 
 1. Experiment 1:
-   - name: `wavlm_baseline_no_mal_no_tim`
+   - name: `wavlm_baseline_no_cdm_no_cim`
    - model: WavLM utterance-level SER baseline
-   - no MAL
-   - no TIM
+   - no CDM
+   - no CIM
    - no dialogue memory
    - no timestamp feature
    - no speaker feature as model input
 
 2. Experiment 2:
-   - name: `wavlm_mal_no_tim`
-   - model: WavLM + MAL
+   - name: `wavlm_cdm_no_cim`
+   - model: WavLM + CDM
    - uses dialogue memory
    - no real temporal feature
    - temporal_feature_mode should be `zero`
@@ -25,12 +25,12 @@ Experiments to verify:
    - memory must be causal / read-before-write if implemented that way
 
 3. Experiment 3:
-   - name: `wavlm_tim`
-   - model: WavLM + TIM
+   - name: `wavlm_cim`
+   - model: WavLM + CIM
    - uses real temporal interaction features
    - must not use future utterances
-   - must normalize continuous temporal features using train split only
-   - must not normalize binary flags
+   - must norcdmize continuous temporal features using train split only
+   - must not norcdmize binary flags
    - must save temporal feature statistics
    - must be comparable to Exp 2
 
@@ -39,13 +39,13 @@ Please verify the following items:
 A. File structure
 Check that the expected files exist or equivalent files exist:
 
-- `configs/wavlm_baseline_no_mal_no_tim.yaml`
-- `configs/wavlm_mal_no_tim.yaml`
-- `configs/wavlm_tim.yaml`
+- `configs/wavlm_baseline_no_cdm_no_cim.yaml`
+- `configs/wavlm_cdm_no_cim.yaml`
+- `configs/wavlm_cim.yaml`
 - dataset/parser module for Kaggle IEMOCAP
 - WavLM baseline model file
-- MAL model file
-- TIM model file
+- CDM model file
+- CIM model file
 - training scripts for Exp 1/2/3
 - temporal feature utility for Exp 3
 - subset evaluation script if implemented
@@ -104,7 +104,7 @@ Verify that `WavLMSERBaseline`:
 - trains only pooling/classifier parameters by default
 
 E. Experiment 2 model behavior
-Verify that WavLM + MAL:
+Verify that WavLM + CDM:
 
 - uses fixed WavLM embeddings or frozen WavLM as configured
 - uses dialogue ordering correctly
@@ -119,7 +119,7 @@ Verify that WavLM + MAL:
 - uses the same metric/checkpoint logic as Exp 1
 
 F. Experiment 3 model behavior
-Verify that WavLM + TIM:
+Verify that WavLM + CIM:
 
 - uses real temporal interaction features
 - uses only causal metadata:
@@ -148,8 +148,8 @@ Verify that WavLM + TIM:
   15. speaker_prev_mean_duration
   16. speaker_prev_turn_count_norm
 
-- normalizes continuous features using train split statistics only
-- does not normalize binary flags
+- norcdmizes continuous features using train split statistics only
+- does not norcdmize binary flags
 - saves `temporal_feature_stats.json`
 - uses the same checkpoint selection metric as Exp 1/2, preferably validation UA
 
@@ -185,9 +185,9 @@ Verify:
 I. Output schema
 For each of:
 
-- `results/wavlm_baseline_no_mal_no_tim/`
-- `results/wavlm_mal_no_tim/`
-- `results/wavlm_tim/`
+- `results/wavlm_baseline_no_cdm_no_cim/`
+- `results/wavlm_cdm_no_cim/`
+- `results/wavlm_cim/`
 
 Verify expected output files if training has been run:
 
@@ -199,7 +199,7 @@ Verify expected output files if training has been run:
 - `best.pth`
 - `last.pth`
 
-For `results/wavlm_tim/`, also verify:
+For `results/wavlm_cim/`, also verify:
 
 - `temporal_feature_stats.json`
 - `subset_metrics.json` if subset analysis is implemented
@@ -226,7 +226,7 @@ Verify:
 - tqdm progress bars are used or available
 
 K. Dry-run
-Run a minimal dry-run if possible:
+Run a minicdm dry-run if possible:
 
 - load dataset
 - build train/val/test split
@@ -266,8 +266,8 @@ Critical failures include:
 - wrong label mapping
 - utterance-level split leakage
 - using test metrics for checkpoint selection
-- Exp 1 using metadata/timing/memory
-- Exp 2 using real timing features
+- Exp 1 using metadata/ciming/memory
+- Exp 2 using real ciming features
 - Exp 3 using future utterance information
 - wrong WA/UA definitions
 - missing predictions schema
