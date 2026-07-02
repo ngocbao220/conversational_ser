@@ -2,10 +2,10 @@
 set -euo pipefail
 
 CONFIGS=(
-  "configs/cim_branch_concat_interaction4_no_relative_gap_loso.yaml"
-  "configs/cim_branch_concat_interaction4_no_overlap_ratio_loso.yaml"
-  "configs/cim_branch_concat_interaction4_no_speaker_switch_loso.yaml"
-  "configs/cim_branch_concat_interaction4_no_speaker_overlap_style_loso.yaml"
+  "configs/cim_interaction4_branch_concat_no_relative_gap.yaml"
+  "configs/cim_interaction4_branch_concat_no_overlap_ratio.yaml"
+  "configs/cim_interaction4_branch_concat_no_speaker_switch.yaml"
+  "configs/cim_interaction4_branch_concat_no_speaker_overlap_style.yaml"
 )
 
 for config in "${CONFIGS[@]}"; do

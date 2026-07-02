@@ -255,7 +255,7 @@ def load_iemocap_splits(config: Mapping[str, Any]) -> DatasetDict:
         raw = DatasetDict({"train": raw[first_split]})
 
     if str(dataset_cfg.get("split_strategy", "random")).lower() == "loso":
-        return load_loso_iemocap_splits(raw, dataset_cfg, sampling_rate, max_duration_seconds, num_proc, seed)
+        return load_iemocap_splits(raw, dataset_cfg, sampling_rate, max_duration_seconds, num_proc, seed)
 
     prepared = DatasetDict(
         {
@@ -287,7 +287,7 @@ def load_iemocap_splits(config: Mapping[str, Any]) -> DatasetDict:
     )
 
 
-def load_loso_iemocap_splits(
+def load_iemocap_splits(
     raw: DatasetDict,
     dataset_cfg: Mapping[str, Any],
     sampling_rate: int,

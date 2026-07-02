@@ -9,10 +9,10 @@ from typing import Any, Mapping
 
 METRICS = ("WA", "UA", "WF1", "Macro-F1")
 DEFAULT_RUNS = {
-    "Baseline": Path("results/wavlm_baseline_no_cdm_no_cim/metrics.json"),
-    "CDM": Path("results/wavlm_cdm_no_cim/metrics.json"),
-    "CIM": Path("results/wavlm_cim/metrics.json"),
-    "dual_branch": Path("results/dual_branch/metrics.json"),
+    "Baseline": Path("results/main/wavlm/legacy_single_split_baseline/metrics.json"),
+    "CDM": Path("results/cdm_ablation/legacy_single_split_full/metrics.json"),
+    "CIM": Path("results/feature_ablation/legacy_concat/single_split_feature_16/metrics.json"),
+    "dual_branch": Path("results/architecture_ablation/legacy_dual_branch/metrics.json"),
 }
 
 
@@ -31,7 +31,7 @@ def metric_value(payload: Mapping[str, Any], metric: str) -> float:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compare Baseline, CDM, CIM and dual-branch metrics.")
-    parser.add_argument("--output-dir", default="results/dual_branch")
+    parser.add_argument("--output-dir", default="results/architecture_ablation/legacy_dual_branch")
     args = parser.parse_args()
 
     rows = []

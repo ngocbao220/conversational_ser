@@ -186,8 +186,8 @@ def analyze(cdm_path: Path, cim_path: Path, output_dir: Path, short_gap: float, 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Analyze paired CDM versus CIM errors by temporal dialogue conditions.")
-    parser.add_argument("--cdm-predictions", type=Path, default=Path("results/wavlm_cdm_no_cim/predictions.csv"))
-    parser.add_argument("--cim-predictions", type=Path, default=Path("results/wavlm_cim/predictions.csv"))
+    parser.add_argument("--cdm-predictions", type=Path, default=Path("results/cdm_ablation/legacy_single_split_full/predictions.csv"))
+    parser.add_argument("--cim-predictions", type=Path, default=Path("results/feature_ablation/legacy_concat/single_split_feature_16/predictions.csv"))
     parser.add_argument("--output-dir", type=Path, default=Path("results/paired_error_analysis"))
     parser.add_argument("--short-gap", type=float, default=0.3)
     parser.add_argument("--long-gap", type=float, default=1.0)

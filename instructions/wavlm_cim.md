@@ -67,7 +67,7 @@ Feature normalization:
 
 * Normalize continuous features using statistics from the training split only.
 * Save the normalization stats to:
-  `results/wavlm_cim/temporal_feature_stats.json`
+  `results/feature_ablation/legacy_concat/single_split_feature_16/temporal_feature_stats.json`
 * Apply the same stats to dev/test.
 
 Temporal encoder:
@@ -169,10 +169,10 @@ Report the same metrics as Experiments 1 and 2:
 
 Save outputs:
 
-* `results/wavlm_cim/metrics.json`
-* `results/wavlm_cim/predictions.csv`
-* `results/wavlm_cim/config.json`
-* `results/wavlm_cim/temporal_feature_stats.json`
+* `results/feature_ablation/legacy_concat/single_split_feature_16/metrics.json`
+* `results/feature_ablation/legacy_concat/single_split_feature_16/predictions.csv`
+* `results/feature_ablation/legacy_concat/single_split_feature_16/config.json`
+* `results/feature_ablation/legacy_concat/single_split_feature_16/temporal_feature_stats.json`
 * best checkpoint
 
 `predictions.csv` should contain:
@@ -207,7 +207,7 @@ It should report metrics for:
 
 Save:
 
-* `results/wavlm_cim/subset_metrics.json`
+* `results/feature_ablation/legacy_concat/single_split_feature_16/subset_metrics.json`
 
 Acceptance criteria:
 The code is correct if:

@@ -185,9 +185,9 @@ Verify:
 I. Output schema
 For each of:
 
-- `results/wavlm_baseline_no_cdm_no_cim/`
-- `results/wavlm_cdm_no_cim/`
-- `results/wavlm_cim/`
+- `results/main/wavlm/legacy_single_split_baseline/`
+- `results/cdm_ablation/legacy_single_split_full/`
+- `results/feature_ablation/legacy_concat/single_split_feature_16/`
 
 Verify expected output files if training has been run:
 
@@ -199,7 +199,7 @@ Verify expected output files if training has been run:
 - `best.pth`
 - `last.pth`
 
-For `results/wavlm_cim/`, also verify:
+For `results/feature_ablation/legacy_concat/single_split_feature_16/`, also verify:
 
 - `temporal_feature_stats.json`
 - `subset_metrics.json` if subset analysis is implemented

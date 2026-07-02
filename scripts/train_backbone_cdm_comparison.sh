@@ -2,10 +2,10 @@
 set -euo pipefail
 
 CONFIGS=(
-  "configs/backbone_wav2vec2_baseline_loso.yaml"
-  "configs/backbone_wav2vec2_cdm_loso.yaml"
-  "configs/backbone_hubert_baseline_loso.yaml"
-  "configs/backbone_hubert_cdm_loso.yaml"
+  "configs/backbone_wav2vec2_baseline.yaml"
+  "configs/backbone_wav2vec2_cdm.yaml"
+  "configs/backbone_hubert_baseline.yaml"
+  "configs/backbone_hubert_cdm.yaml"
 )
 
 for config in "${CONFIGS[@]}"; do

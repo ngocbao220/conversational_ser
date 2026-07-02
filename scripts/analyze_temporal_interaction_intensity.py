@@ -10,20 +10,20 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 FEATURE_PATH = ROOT / "results" / "feature_engineering" / "features_all.csv"
-VERSIONED_ROOT = ROOT / "results" / "versioned_loso"
+RESULTS_ROOT = ROOT / "results"
 OUT_DIR = ROOT / "reports" / "temporal_interaction_intensity"
 
 LABELS = ["angry", "happy", "neutral", "sad"]
 
 MODEL_DIRS = {
-    "Baseline": "baseline_wavlm",
-    "CDM": "cdm_wavlm",
-    "CIM v1 concat": "v1_cim_concat",
-    "CIM v3.1 recommended": "v3_1_cim_recommended_v2",
-    "CIM v3.2 compact": "v3_2_cim_compact_primitives",
-    "Dual v2.1 end2end": "v2_1_dual_end2end",
-    "Dual v2.2.1 3phase": "v2_2_1_dual_dialogue_temporal_fuse",
-    "Dual v2.2.2 temporal-first": "v2_2_2_dual_temporal_dialogue_fuse",
+    "Baseline": "baseline/wavlm",
+    "CDM": "cdm_ablations/full",
+    "CM v1 concat": "cm_ablations/cim_concat_v1",
+    "CM v3.1 recommended": "cm_ablations/cim_concat_recommended",
+    "CM v3.2 compact": "cm_ablations/cim_concat_compact",
+    "CM dual v2.1 end2end": "cm_ablations/cim_dual_end2end",
+    "CM dual v2.2.1 3phase": "cm_ablations/cim_dual_dialogue_first",
+    "CM dual v2.2.2 temporal-first": "cm_ablations/cim_dual_interaction_first",
 }
 
 
@@ -74,7 +74,7 @@ def accuracy_from_predictions(group: pd.DataFrame) -> float:
 
 def read_predictions(model_dir: str) -> pd.DataFrame:
     rows = []
-    root = VERSIONED_ROOT / model_dir
+    root = RESULTS_ROOT / model_dir
     for path in sorted(root.glob("cross_session/*/test_Ses*/predictions.csv")):
         session_text = path.parent.name.replace("test_Ses", "")
         try:

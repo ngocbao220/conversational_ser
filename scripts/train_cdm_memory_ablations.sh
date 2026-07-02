@@ -2,9 +2,9 @@
 set -euo pipefail
 
 CONFIGS=(
-  "configs/wavlm_cdm_zero_state_loso.yaml"
-  "configs/wavlm_cdm_no_update_loso.yaml"
-  "configs/wavlm_cdm_shuffled_memory_loso.yaml"
+  "configs/cdm_ablation_zero_state.yaml"
+  "configs/cdm_ablation_no_update.yaml"
+  "configs/cdm_ablation_shuffled_memory.yaml"
 )
 
 for config in "${CONFIGS[@]}"; do

@@ -126,7 +126,7 @@ done
 if [[ -z "$OUTPUT_DIR" ]]; then
   case "$MODEL_NAME" in
     b01)
-      OUTPUT_DIR="outputs/b01_loso_unfreeze4"
+      OUTPUT_DIR="outputs/b01_unfreeze4"
       ;;
     *)
       OUTPUT_DIR="outputs/b0_utterance"

@@ -4,7 +4,7 @@ Implement a new experiment with:
 
 run_name: dual_branch
 experiment_name: wavlm_dual_branch_cim
-output_dir: results/dual_branch
+output_dir: results/architecture_ablation/legacy_dual_branch
 
 Goal:
 Implement a Dual-Branch Temporal Dialogue Memory model.
@@ -190,7 +190,7 @@ Default temporal features:
 
 Continuous features:
 - normalize using train split statistics only
-- save stats to results/dual_branch/temporal_feature_stats.json
+- save stats to results/architecture_ablation/legacy_dual_branch/temporal_feature_stats.json
 - apply same stats to val/test
 
 Binary flags:
@@ -220,7 +220,7 @@ Default config:
 
 run_name: dual_branch
 experiment_name: wavlm_dual_branch_cim
-output_dir: results/dual_branch
+output_dir: results/architecture_ablation/legacy_dual_branch
 
 use_precomputed_wavlm_embeddings: true
 freeze_wavlm: true
@@ -280,9 +280,9 @@ Baselines and comparisons
 
 The new model must be directly comparable with:
 
-- results/wavlm_baseline_no_cdm_no_cim
-- results/wavlm_cdm_no_cim
-- results/wavlm_cim
+- results/main/wavlm/legacy_single_split_baseline
+- results/cdm_ablation/legacy_single_split_full
+- results/feature_ablation/legacy_concat/single_split_feature_16
 
 Add evaluation script or extend existing one to compare:
 
@@ -301,7 +301,7 @@ Implement or prepare config variants:
 2. dual_branch_no_temporal
    - beta fixed to 0
    - should behave like dialogue branch only
-3. dual_branch_temporal_only
+3. dual_branch_interaction_only
    - alpha fixed to 0
    - use h_i + temporal branch only
 4. dual_branch_zero_temporal
@@ -316,8 +316,8 @@ Implement or prepare config variants:
 
 Save ablation results to:
 
-results/dual_branch/ablation_metrics.csv
-results/dual_branch/ablation_metrics.json
+results/architecture_ablation/legacy_dual_branch/ablation_metrics.csv
+results/architecture_ablation/legacy_dual_branch/ablation_metrics.json
 
 ==================================================
 Outputs
@@ -325,7 +325,7 @@ Outputs
 
 Save all outputs under:
 
-results/dual_branch/
+results/architecture_ablation/legacy_dual_branch/
 
 Required files:
 
@@ -401,7 +401,7 @@ Evaluate dual_branch on:
 
 Save:
 
-results/dual_branch/temporal_subset_metrics.json
+results/architecture_ablation/legacy_dual_branch/temporal_subset_metrics.json
 
 Also compare against CDM and old CIM if their predictions exist.
 
@@ -411,7 +411,7 @@ Branch diagnostics
 
 Save:
 
-results/dual_branch/branch_gate_stats.json
+results/architecture_ablation/legacy_dual_branch/branch_gate_stats.json
 
 Include:
 
@@ -445,7 +445,7 @@ The implementation is correct if:
 10. No future utterance information is used.
 11. Continuous temporal features are normalized with train split only.
 12. Binary temporal flags are not normalized.
-13. Outputs and diagnostics are saved under results/dual_branch.
+13. Outputs and diagnostics are saved under results/architecture_ablation/legacy_dual_branch.
 14. The model can be compared directly with CDM and old CIM.
 
 ==================================================

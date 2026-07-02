@@ -15,15 +15,15 @@ IEMOCAP_ROOT = ROOT / "data" / "iemocap"
 
 PREDICTION_CANDIDATES = {
     "baseline": (
-        ROOT / "results" / "versioned_loso" / "baseline_wavlm" / "cross_session" / "run_20260630_091825" / "test_Ses05" / "predictions.csv"
+        ROOT / "results" / "main" / "wavlm" / "baseline" / "cross_session" / "run_20260630_091825" / "test_Ses05" / "predictions.csv"
     ),
     "cdm": (
-        ROOT / "results" / "versioned_loso" / "cdm_wavlm" / "cross_session" / "run_20260630_092932" / "test_Ses05" / "predictions.csv"
+        ROOT / "results" / "main" / "wavlm" / "cdm" / "cross_session" / "run_20260630_092932" / "test_Ses05" / "predictions.csv"
     ),
     "cim_v1": (
-        ROOT / "results" / "versioned_loso" / "v1_cim_concat" / "cross_session" / "run_20260629_165854" / "test_Ses05" / "predictions.csv"
+        ROOT / "results" / "feature_ablation" / "legacy_concat" / "feature_16" / "cross_session" / "run_20260629_165854" / "test_Ses05" / "predictions.csv"
     ),
-    "cim": ROOT / "results" / "cim_full_loso" / "branch_concat_interaction4" / "cross_session" / "run_20260701_045803" / "test_Ses05" / "predictions.csv",
+    "cim": ROOT / "results" / "architecture_ablation" / "branch_concat" / "cross_session" / "run_20260701_045803" / "test_Ses05" / "predictions.csv",
 }
 MODEL_DISPLAY_NAMES = {
     "baseline": "WavLM baseline",

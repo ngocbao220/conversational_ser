@@ -12,5 +12,5 @@ from scripts.train_wavlm_cim import main
 
 if __name__ == "__main__":
     if "--config" not in sys.argv:
-        sys.argv.extend(["--config", "configs/wavlm_cim_v2_loso.yaml"])
+        sys.argv.extend(["--config", "configs/wavlm_cim_v2.yaml"])
     main()

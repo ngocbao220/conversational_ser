@@ -119,9 +119,9 @@ Report the same metrics as Experiment 1:
 
 Save outputs:
 
-* `results/wavlm_cdm_no_cim/metrics.json`
-* `results/wavlm_cdm_no_cim/predictions.csv`
-* `results/wavlm_cdm_no_cim/config.json`
+* `results/cdm_ablation/legacy_single_split_full/metrics.json`
+* `results/cdm_ablation/legacy_single_split_full/predictions.csv`
+* `results/cdm_ablation/legacy_single_split_full/config.json`
 * best checkpoint
 
 `predictions.csv` should contain:

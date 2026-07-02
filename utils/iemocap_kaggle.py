@@ -452,7 +452,7 @@ def split_samples_for_config(
             splits["train"] = train
             splits["validation"] = validation
         return splits
-    return split_loso_by_dialogue(
+    return split_by_dialogue(
         samples,
         test_session=int(dataset_cfg.get("test_session", 5)),
         validation_ratio=float(dataset_cfg.get("validation_ratio", 0.1)),
@@ -460,7 +460,7 @@ def split_samples_for_config(
     )
 
 
-def split_loso_by_dialogue(
+def split_by_dialogue(
     samples: Sequence[ConversationSERSample],
     test_session: int,
     validation_ratio: float,

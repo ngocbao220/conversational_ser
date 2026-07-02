@@ -484,9 +484,9 @@ Save:
 If prediction files are available, analyze whether temporal features explain improvements/errors.
 
 Try to load:
-- results/wavlm_cdm_no_cim/predictions.csv
-- results/wavlm_cim/predictions.csv
-- results/dual_branch/predictions.csv
+- results/cdm_ablation/legacy_single_split_full/predictions.csv
+- results/feature_ablation/legacy_concat/single_split_feature_16/predictions.csv
+- results/architecture_ablation/legacy_dual_branch/predictions.csv
 
 Merge by:
 - dialogue_id

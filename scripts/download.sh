@@ -31,7 +31,7 @@ REPO_TYPE="${REPO_TYPE:-model}"
 REVISION="${REVISION:-main}"
 
 # Download target. Repository folders are preserved under this root.
-# Final checkpoint path defaults to `results/wavlm_cim/best.pth`.
+# Final checkpoint path defaults to `results/feature_ablation/legacy_concat/single_split_feature_16/best.pth`.
 DOWNLOAD_ROOT="${DOWNLOAD_ROOT:-results}"
 LOCAL_MODEL_DIR="${LOCAL_MODEL_DIR:-$DOWNLOAD_ROOT/$MODEL_NAME}"
 CHECKPOINT_NAME="${CHECKPOINT_NAME:-best.pth}"

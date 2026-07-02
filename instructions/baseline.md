@@ -184,7 +184,7 @@ Default hyperparameters:
 
 Save outputs:
 
-- `results/wavlm_baseline_no_cdm_no_cim/metrics.json`
+- `results/main/wavlm/legacy_single_split_baseline/metrics.json`
     metrics.json should include
 
     epoch
@@ -196,8 +196,8 @@ Save outputs:
     per-class precision
     per-class recall
     per-class F1
-- `results/wavlm_baseline_no_cdm_no_cim/predictions.csv`
-- `results/wavlm_baseline_no_cdm_no_cim/config.json`
+- `results/main/wavlm/legacy_single_split_baseline/predictions.csv`
+- `results/main/wavlm/legacy_single_split_baseline/config.json`
 -  Save:
     best.pth according to the best validation UA
     last.pth

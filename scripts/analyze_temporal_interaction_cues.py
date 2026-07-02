@@ -958,7 +958,7 @@ def main() -> None:
     )
     parser.add_argument("--meld-kaggle-dataset", default="zaber666/meld-dataset")
     parser.add_argument("--output-dir", default="reports/temporal_interaction_study")
-    parser.add_argument("--embedding-cache", default="results/wavlm_cim/cache/wavlm_mean_embeddings.pt")
+    parser.add_argument("--embedding-cache", default="results/feature_ablation/legacy_concat/single_split_feature_16/cache/wavlm_mean_embeddings.pt")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)

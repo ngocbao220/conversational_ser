@@ -10,9 +10,11 @@ import yaml
 
 VERSION_REGISTRY: dict[str, dict[str, Any]] = {
     "baseline": {
-        "name": "baseline_wavlm",
+        "name": "baseline",
+        "result_group": "baseline",
+        "result_name": "wavlm",
         "trainer_module": "scripts.train_wavlm_baseline",
-        "experiment_name": "baseline_wavlm",
+        "experiment_name": "baseline",
         "model_remove_keys": [
             "use_cdm_memory",
             "use_temporal_features",
@@ -43,9 +45,11 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "training_stage": None,
     },
     "cdm": {
-        "name": "cdm_wavlm",
+        "name": "cdm",
+        "result_group": "cdm_ablations",
+        "result_name": "full",
         "trainer_module": "scripts.train_wavlm_cdm",
-        "experiment_name": "cdm_wavlm",
+        "experiment_name": "cdm",
         "model_remove_keys": [
             "use_cdm_memory",
             "temporal_emb_dim",
@@ -76,9 +80,11 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "training_stage": None,
     },
     "1": {
-        "name": "v1_cim_concat",
+        "name": "cim_concat_v1",
+        "result_group": "cm_ablations",
+        "result_name": "cim_concat_v1",
         "trainer_module": "scripts.train_wavlm_cim",
-        "experiment_name": "v1_cim_concat",
+        "experiment_name": "cim_concat_v1",
         "model_overrides": {
             "temporal_feature_set": "v1",
             "temporal_feature_dim": 16,
@@ -87,7 +93,9 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "training_stage": None,
     },
     "2.1": {
-        "name": "v2_1_dual_end2end",
+        "name": "cim_dual_end2end",
+        "result_group": "cm_ablations",
+        "result_name": "cim_dual_end2end",
         "trainer_module": "scripts.train_dual_branch",
         "experiment_name": "v2_1_dual_branch_end2end",
         "model_overrides": {
@@ -98,9 +106,11 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "training_stage": {"mode": "end_to_end"},
     },
     "2.2.1": {
-        "name": "v2_2_1_dual_dialogue_temporal_fuse",
+        "name": "cim_dual_dialogue_first",
+        "result_group": "cm_ablations",
+        "result_name": "cim_dual_dialogue_first",
         "trainer_module": "scripts.train_dual_branch",
-        "experiment_name": "v2_2_1_dual_dialogue_temporal_fuse",
+        "experiment_name": "cim_dual_dialogue_first",
         "model_overrides": {
             "temporal_feature_set": "v1",
             "temporal_feature_dim": 16,
@@ -117,9 +127,11 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         },
     },
     "2.2.2": {
-        "name": "v2_2_2_dual_temporal_dialogue_fuse",
+        "name": "cim_dual_interaction_first",
+        "result_group": "cm_ablations",
+        "result_name": "cim_dual_interaction_first",
         "trainer_module": "scripts.train_dual_branch",
-        "experiment_name": "v2_2_2_dual_temporal_dialogue_fuse",
+        "experiment_name": "cim_dual_interaction_first",
         "model_overrides": {
             "temporal_feature_set": "v1",
             "temporal_feature_dim": 16,
@@ -136,9 +148,11 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         },
     },
     "3.1": {
-        "name": "v3_1_cim_recommended_v2",
+        "name": "cim_concat_recommended",
+        "result_group": "cm_ablations",
+        "result_name": "cim_concat_recommended",
         "trainer_module": "scripts.train_wavlm_cim",
-        "experiment_name": "v3_1_cim_recommended_v2",
+        "experiment_name": "cim_concat_recommended",
         "model_overrides": {
             "temporal_feature_set": "recommended_v2",
             "temporal_feature_dim": 36,
@@ -147,9 +161,11 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "training_stage": None,
     },
     "3.2": {
-        "name": "v3_2_cim_compact_primitives",
+        "name": "cim_concat_compact",
+        "result_group": "cm_ablations",
+        "result_name": "cim_concat_compact",
         "trainer_module": "scripts.train_wavlm_cim",
-        "experiment_name": "v3_2_cim_compact_primitives",
+        "experiment_name": "cim_concat_compact",
         "model_overrides": {
             "temporal_feature_set": "selected_primitives",
             "temporal_feature_dim": 12,
@@ -311,7 +327,7 @@ def resolve_version_config(
     version: str,
     setting: str = "A",
     seed: int = 42,
-    output_root: str | Path = "results/versioned_loso",
+    output_root: str | Path = "results",
     max_epochs: int | None = None,
     cross_session: bool | None = None,
     wandb_mode: str | None = None,
@@ -324,7 +340,7 @@ def resolve_version_config(
 
     version_spec = VERSION_REGISTRY[version]
     setting_spec = SETTING_REGISTRY[setting]
-    output_dir = Path(output_root) / f"setting_{setting}" / str(version_spec["name"])
+    output_dir = Path(output_root) / str(version_spec["result_group"]) / str(version_spec["result_name"]) / f"setting_{setting}"
 
     config = base_config()
     config = deep_update(config, {"model": setting_spec["model"]})
@@ -362,6 +378,8 @@ def resolve_version_config(
         "version": version,
         "setting": setting,
         "version_name": version_spec["name"],
+        "result_group": version_spec["result_group"],
+        "result_name": version_spec["result_name"],
         "setting_description": setting_spec["description"],
         "trainer_module": version_spec["trainer_module"],
         "output_dir": str(output_dir),

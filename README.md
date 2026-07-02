@@ -68,13 +68,13 @@ hoặc đặt `kaggle.json` tại `~/.kaggle/kaggle.json`.
 Outputs:
 
 ```text
-results/wavlm_baseline_no_cdm_no_cim/metrics.json
-results/wavlm_baseline_no_cdm_no_cim/predictions.csv
-results/wavlm_baseline_no_cdm_no_cim/config.json
-results/wavlm_baseline_no_cdm_no_cim/confusion_matrix.csv
-results/wavlm_baseline_no_cdm_no_cim/confusion_matrix.png
-results/wavlm_baseline_no_cdm_no_cim/best.pth
-results/wavlm_baseline_no_cdm_no_cim/last.pth
+results/single_split/baseline/metrics.json
+results/single_split/baseline/predictions.csv
+results/single_split/baseline/config.json
+results/single_split/baseline/confusion_matrix.csv
+results/single_split/baseline/confusion_matrix.png
+results/single_split/baseline/best.pth
+results/single_split/baseline/last.pth
 ```
 
 ## Experiment 2 - WavLM + CDM No CIM
@@ -105,13 +105,13 @@ Mặc định:
 Outputs:
 
 ```text
-results/wavlm_cdm_no_cim/metrics.json
-results/wavlm_cdm_no_cim/predictions.csv
-results/wavlm_cdm_no_cim/config.json
-results/wavlm_cdm_no_cim/confusion_matrix.csv
-results/wavlm_cdm_no_cim/confusion_matrix.png
-results/wavlm_cdm_no_cim/best.pth
-results/wavlm_cdm_no_cim/last.pth
+results/single_split/cdm/metrics.json
+results/single_split/cdm/predictions.csv
+results/single_split/cdm/config.json
+results/single_split/cdm/confusion_matrix.csv
+results/single_split/cdm/confusion_matrix.png
+results/single_split/cdm/best.pth
+results/single_split/cdm/last.pth
 ```
 
 ## Experiment 3 - WavLM + CIM
@@ -143,15 +143,15 @@ Mặc định:
 Outputs:
 
 ```text
-results/wavlm_cim/metrics.json
-results/wavlm_cim/predictions.csv
-results/wavlm_cim/config.json
-results/wavlm_cim/temporal_feature_stats.json
-results/wavlm_cim/confusion_matrix.csv
-results/wavlm_cim/confusion_matrix.png
-results/wavlm_cim/subset_metrics.json
-results/wavlm_cim/best.pth
-results/wavlm_cim/last.pth
+results/single_split/cim_concat/metrics.json
+results/single_split/cim_concat/predictions.csv
+results/single_split/cim_concat/config.json
+results/single_split/cim_concat/temporal_feature_stats.json
+results/single_split/cim_concat/confusion_matrix.csv
+results/single_split/cim_concat/confusion_matrix.png
+results/single_split/cim_concat/subset_metrics.json
+results/single_split/cim_concat/best.pth
+results/single_split/cim_concat/last.pth
 ```
 
 ## Legacy B0 - Utterance-Level Baseline
@@ -248,7 +248,7 @@ B01 dùng cùng classifier với B0, nhưng:
 Output mặc định:
 
 ```text
-outputs/b01_loso_unfreeze4/
+outputs/b01_unfreeze4/
 ```
 
 ## Upload Checkpoint

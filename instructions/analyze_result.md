@@ -35,19 +35,19 @@ Input files
 The notebook should automatically look for these files:
 
 CDM predictions:
-results/wavlm_cdm_no_cim/predictions.csv
+results/cdm_ablation/legacy_single_split_full/predictions.csv
 
 Old CIM predictions:
-results/wavlm_cim/predictions.csv
+results/feature_ablation/legacy_concat/single_split_feature_16/predictions.csv
 
 Dual Branch predictions:
-results/dual_branch/predictions.csv
+results/architecture_ablation/legacy_dual_branch/predictions.csv
 
 Dual Branch temporal subset:
-results/dual_branch/temporal_subset_metrics.json
+results/architecture_ablation/legacy_dual_branch/temporal_subset_metrics.json
 
 Dual Branch diagnostics:
-results/dual_branch/branch_gate_stats.json
+results/architecture_ablation/legacy_dual_branch/branch_gate_stats.json
 
 Optional transcript metadata:
 If transcript text is available in the dataset parser or metadata cache, load it.
@@ -142,7 +142,7 @@ Create columns:
 - both_wrong
 
 Save merged analysis table:
-results/dual_branch/analysis/merged_predictions.csv
+results/architecture_ablation/legacy_dual_branch/analysis/merged_predictions.csv
 
 --------------------------------------------------
 4. Overall metrics
@@ -156,7 +156,7 @@ Compute metrics for each available model:
 - per-class precision/recall/F1
 
 Create a summary table:
-results/dual_branch/analysis/overall_metrics.csv
+results/architecture_ablation/legacy_dual_branch/analysis/overall_metrics.csv
 
 Plot bar chart for:
 - WA
@@ -182,8 +182,8 @@ Report:
 - prediction transition matrix
 
 Save:
-results/dual_branch/analysis/error_taxonomy.csv
-results/dual_branch/analysis/error_taxonomy_by_emotion.csv
+results/architecture_ablation/legacy_dual_branch/analysis/error_taxonomy.csv
+results/architecture_ablation/legacy_dual_branch/analysis/error_taxonomy_by_emotion.csv
 
 Plots:
 - stacked bar by emotion
@@ -229,7 +229,7 @@ Analyze:
 - dual hurt rate by interaction bin
 
 Save:
-results/dual_branch/analysis/interaction_score_analysis.csv
+results/architecture_ablation/legacy_dual_branch/analysis/interaction_score_analysis.csv
 
 Plots:
 - histogram of interaction_score
@@ -272,7 +272,7 @@ For binary features:
 - rate per category
 
 Save:
-results/dual_branch/analysis/feature_by_error_category.csv
+results/architecture_ablation/legacy_dual_branch/analysis/feature_by_error_category.csv
 
 Plots:
 - boxplots for continuous features
@@ -297,7 +297,7 @@ Questions:
 - Which emotion classes rely more on temporal branch?
 
 Save:
-results/dual_branch/analysis/residual_analysis.csv
+results/architecture_ablation/legacy_dual_branch/analysis/residual_analysis.csv
 
 Plots:
 - temporal_residual_norm by interaction bin
@@ -321,7 +321,7 @@ For each emotion class:
 - number of CDM correct / Dual wrong
 
 Save:
-results/dual_branch/analysis/emotion_wise_gain.csv
+results/architecture_ablation/legacy_dual_branch/analysis/emotion_wise_gain.csv
 
 Plot:
 - recall gain by emotion
@@ -345,9 +345,9 @@ Interpretation:
 - Positive off-diagonal values mean Dual increases that error type.
 
 Save:
-results/dual_branch/analysis/confusion_cdm.csv
-results/dual_branch/analysis/confusion_dual.csv
-results/dual_branch/analysis/confusion_delta_dual_minus_cdm.csv
+results/architecture_ablation/legacy_dual_branch/analysis/confusion_cdm.csv
+results/architecture_ablation/legacy_dual_branch/analysis/confusion_dual.csv
+results/architecture_ablation/legacy_dual_branch/analysis/confusion_delta_dual_minus_cdm.csv
 
 Plots:
 - confusion matrix heatmaps
@@ -415,7 +415,7 @@ Columns should include:
 - audio_path if available
 
 Save under:
-results/dual_branch/analysis/case_studies/
+results/architecture_ablation/legacy_dual_branch/analysis/case_studies/
 
 --------------------------------------------------
 12. Dialogue timeline visualization
@@ -445,7 +445,7 @@ Generate timeline plots for top 10:
 - dual_hurts_cases
 
 Save:
-results/dual_branch/analysis/timelines/
+results/architecture_ablation/legacy_dual_branch/analysis/timelines/
 
 --------------------------------------------------
 13. Feature importance sanity checks
@@ -464,7 +464,7 @@ For each temporal feature, compute:
 - mutual information if available
 
 Save:
-results/dual_branch/analysis/feature_association_with_improvement.csv
+results/architecture_ablation/legacy_dual_branch/analysis/feature_association_with_improvement.csv
 
 --------------------------------------------------
 14. Summary report
@@ -472,7 +472,7 @@ results/dual_branch/analysis/feature_association_with_improvement.csv
 
 Generate a Markdown report:
 
-results/dual_branch/analysis/dual_branch_error_analysis_report.md
+results/architecture_ablation/legacy_dual_branch/analysis/dual_branch_error_analysis_report.md
 
 The report should include:
 
@@ -498,7 +498,7 @@ Output directory
 
 Create:
 
-results/dual_branch/analysis/
+results/architecture_ablation/legacy_dual_branch/analysis/
 
 Do not overwrite original prediction files.
 
@@ -518,7 +518,7 @@ The notebook is correct if:
 8. It creates confusion matrix comparison.
 9. It exports representative case study CSVs.
 10. It produces dialogue timeline visualizations.
-11. It saves all outputs under results/dual_branch/analysis/.
+11. It saves all outputs under results/architecture_ablation/legacy_dual_branch/analysis/.
 12. It generates a final Markdown report.
 13. It does not train any model.
 14. It does not modify existing checkpoints or predictions.

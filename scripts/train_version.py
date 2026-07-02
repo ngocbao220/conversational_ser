@@ -21,7 +21,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--setting", default="A", choices=sorted(SETTING_REGISTRY), help="Training setting preset.")
     parser.add_argument("--all", action="store_true", help="Run all registered versions for the selected setting.")
     parser.add_argument("--seeds", nargs="+", type=int, default=[42], help="One or more seeds.")
-    parser.add_argument("--output-root", default="results/versioned_loso")
+    parser.add_argument("--output-root", default="results")
     parser.add_argument("--dry-run", action="store_true", help="Write/print resolved configs without launching training.")
     parser.add_argument("--list", action="store_true", help="List versions/settings and exit.")
     parser.add_argument("--wandb-mode", choices=["online", "offline", "disabled"], default=None)
