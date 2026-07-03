@@ -9,5 +9,8 @@ iemocap_export/
 outputs/
 iemocap/
 reports/
-results/
+results/**
+!results/
+!results/**/
+!results/**/summary.ipynb
 data/
