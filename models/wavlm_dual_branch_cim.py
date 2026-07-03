@@ -160,7 +160,7 @@ class WavLMDualBranchCIMSerModel(nn.Module):
         if mode == "dialogue_only":
             return dialogue_residual
         if mode == "temporal_residual_sum":
-            return embedding + temporal_residual
+            return embedding + beta_gate * temporal_residual
         raise AssertionError(f"Unhandled fusion mode: {mode}")
 
     def forward(

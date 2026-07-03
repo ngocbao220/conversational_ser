@@ -59,7 +59,18 @@ PREDICTION_TEMPORAL_COLUMNS = [
 
 
 def configure_trainable_gates(model: WavLMDualBranchCIMSerModel, model_cfg: Mapping[str, Any]) -> None:
-    if str(model_cfg.get("fusion_mode", "residual_gated")) != "residual_gated":
+    fusion_mode = str(model_cfg.get("fusion_mode", "residual_gated"))
+    if fusion_mode == "temporal_residual_sum":
+        with torch.no_grad():
+            model.alpha.fill_(0.0)
+        model.alpha.requires_grad_(False)
+        model.beta.requires_grad_(True)
+        if bool(model_cfg.get("fix_beta_zero", False)):
+            with torch.no_grad():
+                model.beta.fill_(0.0)
+            model.beta.requires_grad_(False)
+        return
+    if fusion_mode != "residual_gated":
         model.alpha.requires_grad_(False)
         model.beta.requires_grad_(False)
         return
