@@ -92,11 +92,23 @@ CIM_INTERACTION_4_FEATURE_NAMES = [
     "speaker_prev_overlap_rate",
 ]
 
+CIM_SELECTED_8_FEATURE_NAMES = [
+    "duration",
+    "overlap_ratio",
+    "gap_prev",
+    "speaker_switch",
+    "speaker_prev_overlap_rate",
+    "speaker_prev_mean_gap",
+    "speaker_prev_mean_duration",
+    "speaker_prev_turn_count_norm",
+]
+
 TEMPORAL_FEATURE_SETS = {
     "v1": TEMPORAL_FEATURE_NAMES,
     "recommended_v2": CIM_V2_RECOMMENDED_FEATURE_NAMES,
     "selected_primitives": CIM_SELECTED_PRIMITIVE_FEATURE_NAMES,
     "interaction_4": CIM_INTERACTION_4_FEATURE_NAMES,
+    "selected_8": CIM_SELECTED_8_FEATURE_NAMES,
 }
 
 BINARY_TEMPORAL_FEATURES = {

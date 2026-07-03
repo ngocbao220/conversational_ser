@@ -3,6 +3,7 @@ set -euo pipefail
 
 CONFIGS=(
   "configs/feature_ablation_feature_4.yaml"
+  "configs/feature_ablation_feature_8.yaml"
   "configs/feature_ablation_feature_12.yaml"
   "configs/feature_ablation_feature_16.yaml"
   "configs/feature_ablation_feature_36.yaml"
