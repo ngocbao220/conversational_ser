@@ -21,7 +21,7 @@ class WavLMCDMConfig:
 class CDMMemoryModule(nn.Module):
     """Causal read-before-write dialogue memory."""
 
-    SUPPORTED_MEMORY_ABLATION_MODES = {"normal", "zero_state", "no_update", "shuffled_order"}
+    SUPPORTED_MEMORY_ABLATION_MODES = {"normal", "zero_state", "no_update", "shuffled_order", "reverse_order"}
 
     def __init__(
         self,
@@ -71,10 +71,13 @@ class CDMMemoryModule(nn.Module):
             )
 
         state = initial_state if initial_state is not None else self.initial_state(embeddings.device, embeddings.dtype)
-        if self.memory_ablation_mode == "shuffled_order" and embeddings.shape[0] > 1:
+        if self.memory_ablation_mode in {"shuffled_order", "reverse_order"} and embeddings.shape[0] > 1:
             generator = torch.Generator(device="cpu")
             generator.manual_seed(self.memory_shuffle_seed + int(embeddings.shape[0]))
-            order = torch.randperm(embeddings.shape[0], generator=generator).to(embeddings.device)
+            if self.memory_ablation_mode == "reverse_order":
+                order = torch.arange(embeddings.shape[0] - 1, -1, -1, device=embeddings.device)
+            else:
+                order = torch.randperm(embeddings.shape[0], generator=generator).to(embeddings.device)
             inverse_order = torch.empty_like(order)
             inverse_order[order] = torch.arange(embeddings.shape[0], device=embeddings.device)
             embeddings = embeddings[order]

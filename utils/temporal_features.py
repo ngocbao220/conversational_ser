@@ -137,8 +137,8 @@ class TemporalInputPolicy:
     feature_names: tuple[str, ...] = tuple(TEMPORAL_FEATURE_NAMES)
 
     def __post_init__(self) -> None:
-        if self.mode not in {"real", "zero", "shuffled"}:
-            raise ValueError("temporal_input_mode must be one of: real, zero, shuffled.")
+        if self.mode not in {"real", "zero", "shuffled", "reverse_order"}:
+            raise ValueError("temporal_input_mode must be one of: real, zero, shuffled, reverse_order.")
         unknown_groups = set(self.disabled_feature_groups) - set(TEMPORAL_FEATURE_GROUPS)
         if unknown_groups:
             raise ValueError(f"Unknown temporal feature groups: {sorted(unknown_groups)}.")
@@ -190,6 +190,8 @@ class TemporalInputPolicy:
             generator = torch.Generator(device="cpu")
             generator.manual_seed(int.from_bytes(digest, byteorder="big", signed=False))
             transformed = transformed[torch.randperm(len(transformed), generator=generator)]
+        if self.mode == "reverse_order" and len(transformed) > 1:
+            transformed = torch.flip(transformed, dims=(0,))
         return transformed
 
 
