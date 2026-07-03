@@ -103,12 +103,24 @@ CIM_SELECTED_8_FEATURE_NAMES = [
     "speaker_prev_turn_count_norm",
 ]
 
+CIM_SELECTED_8_TURN_FEATURE_NAMES = [
+    "duration",
+    "gap_prev",
+    "overlap_ratio",
+    "speaker_switch",
+    "turn_index_norm",
+    "speaker_prev_overlap_rate",
+    "speaker_prev_mean_gap",
+    "speaker_prev_mean_duration",
+]
+
 TEMPORAL_FEATURE_SETS = {
     "v1": TEMPORAL_FEATURE_NAMES,
     "recommended_v2": CIM_V2_RECOMMENDED_FEATURE_NAMES,
     "selected_primitives": CIM_SELECTED_PRIMITIVE_FEATURE_NAMES,
     "interaction_4": CIM_INTERACTION_4_FEATURE_NAMES,
     "selected_8": CIM_SELECTED_8_FEATURE_NAMES,
+    "selected_8_turn": CIM_SELECTED_8_TURN_FEATURE_NAMES,
 }
 
 BINARY_TEMPORAL_FEATURES = {

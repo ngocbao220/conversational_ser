@@ -165,6 +165,7 @@ def expected_runs() -> list[ExpectedRun]:
     for slug, feature_set, dim in [
         ("feature_4", "interaction_4", 4),
         ("feature_8", "selected_8", 8),
+        ("feature_8_turn", "selected_8_turn", 8),
         ("feature_12", "selected_primitives", 12),
         ("feature_16", "v1", 16),
         ("feature_36", "recommended_v2", 36),
