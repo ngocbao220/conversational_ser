@@ -15,9 +15,9 @@ import yaml
 
 
 TRAINER_MODULES = {
-    "baseline": "scripts.train_wavlm_baseline",
-    "cdm": "scripts.train_wavlm_cdm",
-    "cim": "scripts.train_wavlm_cim",
+    "baseline": "scripts.train_baseline",
+    "cdm": "scripts.train_cdm",
+    "cim": "scripts.train_cim",
     "dual_branch": "scripts.train_dual_branch",
 }
 METRIC_NAMES = ("WA", "UA", "WF1", "Macro-F1")

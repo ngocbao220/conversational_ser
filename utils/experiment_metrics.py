@@ -27,7 +27,12 @@ def compute_ser_metrics(
 ) -> Dict[str, Any]:
     target_array = np.asarray(targets, dtype=np.int64)
     pred_array = np.asarray(predictions, dtype=np.int64)
+    if target_array.size != pred_array.size:
+        raise ValueError(f"targets and predictions must have the same length, got {target_array.size} and {pred_array.size}")
     label_ids = list(range(len(label_names)))
+    valid_mask = (target_array >= 0) & (target_array < len(label_names)) & (pred_array >= 0) & (pred_array < len(label_names))
+    target_array = target_array[valid_mask]
+    pred_array = pred_array[valid_mask]
     if target_array.size == 0:
         zeros = {label: 0.0 for label in label_names}
         return {
@@ -80,6 +85,8 @@ def save_predictions_csv(path: str | Path, rows: Sequence[Mapping[str, Any]], la
         "speaker_id",
         "start_time",
         "end_time",
+        "raw_label",
+        "is_target_label",
         "gold_label",
         "pred_label",
         *[f"prob_{label}" for label in label_names],

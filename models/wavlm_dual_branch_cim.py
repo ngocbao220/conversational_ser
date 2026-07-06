@@ -19,6 +19,10 @@ class WavLMDualBranchCIMConfig:
     alpha_init: float = 0.0
     beta_init: float = 0.0
     fusion_mode: str = "residual_gated"
+    dialogue_memory_ablation_mode: str = "normal"
+    interaction_memory_ablation_mode: str = "normal"
+    dialogue_memory_shuffle_seed: int = 0
+    interaction_memory_shuffle_seed: int = 0
 
 
 class TemporalInteractionEncoder(nn.Module):
@@ -115,6 +119,14 @@ class WavLMDualBranchCIMSerModel(nn.Module):
         if config.fusion_mode not in self.SUPPORTED_FUSION_MODES:
             supported = ", ".join(sorted(self.SUPPORTED_FUSION_MODES))
             raise ValueError(f"Unsupported fusion_mode={config.fusion_mode!r}. Supported values: {supported}.")
+        supported_memory_ablation_modes = {"normal", "zero_state", "shuffled_order"}
+        for name, mode in {
+            "dialogue_memory_ablation_mode": config.dialogue_memory_ablation_mode,
+            "interaction_memory_ablation_mode": config.interaction_memory_ablation_mode,
+        }.items():
+            if mode not in supported_memory_ablation_modes:
+                supported = ", ".join(sorted(supported_memory_ablation_modes))
+                raise ValueError(f"Unsupported {name}={mode!r}. Supported values: {supported}.")
         self.temporal_encoder = TemporalInteractionEncoder(
             input_dim=config.temporal_feature_dim,
             temporal_emb_dim=config.temporal_emb_dim,
@@ -163,6 +175,38 @@ class WavLMDualBranchCIMSerModel(nn.Module):
             return embedding + beta_gate * temporal_residual
         raise AssertionError(f"Unhandled fusion mode: {mode}")
 
+    def _memory_branch_forward(
+        self,
+        branch: DialogueMemoryBranch | TemporalMemoryBranch,
+        inputs: torch.Tensor,
+        mode: str,
+        shuffle_seed: int,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        state = branch.initial_state(inputs.device, inputs.dtype)
+        if mode == "shuffled_order" and inputs.shape[0] > 1:
+            generator = torch.Generator(device="cpu")
+            generator.manual_seed(int(shuffle_seed) + int(inputs.shape[0]))
+            order = torch.randperm(inputs.shape[0], generator=generator).to(inputs.device)
+            inverse_order = torch.empty_like(order)
+            inverse_order[order] = torch.arange(inputs.shape[0], device=inputs.device)
+            ordered_inputs = inputs[order]
+        else:
+            inverse_order = None
+            ordered_inputs = inputs
+
+        residuals: list[torch.Tensor] = []
+        for branch_input in ordered_inputs:
+            if mode == "zero_state":
+                state = torch.zeros_like(state)
+            residual, projected_input = branch.read(branch_input, state)
+            residuals.append(residual)
+            state = branch.update(projected_input, state)
+
+        residual_tensor = torch.stack(residuals, dim=0)
+        if inverse_order is not None:
+            residual_tensor = residual_tensor[inverse_order]
+        return residual_tensor, state
+
     def forward(
         self,
         embeddings: torch.Tensor,
@@ -180,37 +224,36 @@ class WavLMDualBranchCIMSerModel(nn.Module):
             )
 
         temporal_embeddings = self.temporal_encoder(temporal_features)
-        dialogue_state = self.dialogue_branch.initial_state(embeddings.device, embeddings.dtype)
-        temporal_state = self.temporal_branch.initial_state(embeddings.device, embeddings.dtype)
-        logits: list[torch.Tensor] = []
-        dialogue_residuals: list[torch.Tensor] = []
-        temporal_residuals: list[torch.Tensor] = []
-        fused_embeddings: list[torch.Tensor] = []
+        dialogue_residual_tensor, dialogue_state = self._memory_branch_forward(
+            self.dialogue_branch,
+            embeddings,
+            mode=self.config.dialogue_memory_ablation_mode,
+            shuffle_seed=self.config.dialogue_memory_shuffle_seed,
+        )
+        temporal_residual_tensor, temporal_state = self._memory_branch_forward(
+            self.temporal_branch,
+            temporal_embeddings,
+            mode=self.config.interaction_memory_ablation_mode,
+            shuffle_seed=self.config.interaction_memory_shuffle_seed,
+        )
 
         alpha_gate = torch.tanh(self.alpha)
         beta_gate = torch.tanh(self.beta)
-        for embedding, temporal_embedding in zip(embeddings, temporal_embeddings):
-            dialogue_residual, dialogue_z = self.dialogue_branch.read(embedding, dialogue_state)
-            temporal_residual, temporal_z = self.temporal_branch.read(temporal_embedding, temporal_state)
-            fused = self.fuse(embedding, dialogue_residual, temporal_residual, alpha_gate, beta_gate)
-            logits.append(self.classifier(fused))
-            dialogue_residuals.append(dialogue_residual)
-            temporal_residuals.append(temporal_residual)
-            fused_embeddings.append(fused)
-
-            dialogue_state = self.dialogue_branch.update(dialogue_z, dialogue_state)
-            temporal_state = self.temporal_branch.update(temporal_z, temporal_state)
-
-        logits_tensor = torch.stack(logits, dim=0)
-        dialogue_residual_tensor = torch.stack(dialogue_residuals, dim=0)
-        temporal_residual_tensor = torch.stack(temporal_residuals, dim=0)
+        fused_tensor = self.fuse(
+            embeddings,
+            dialogue_residual_tensor,
+            temporal_residual_tensor,
+            alpha_gate,
+            beta_gate,
+        )
+        logits_tensor = self.classifier(fused_tensor)
         output = {
             "logits": logits_tensor,
             "final_dialogue_state": dialogue_state,
             "final_temporal_state": temporal_state,
             "dialogue_residuals": dialogue_residual_tensor,
             "temporal_residuals": temporal_residual_tensor,
-            "fused_embeddings": torch.stack(fused_embeddings, dim=0),
+            "fused_embeddings": fused_tensor,
             "fusion_mode": self.config.fusion_mode,
             "alpha_value": float(alpha_gate.detach().cpu().item()),
             "beta_value": float(beta_gate.detach().cpu().item()),
@@ -232,5 +275,13 @@ def build_wavlm_dual_branch_cim_ser_model(model_cfg: dict, embedding_dim: int) -
         alpha_init=float(model_cfg.get("alpha_init", 0.0)),
         beta_init=float(model_cfg.get("beta_init", 0.0)),
         fusion_mode=str(model_cfg.get("fusion_mode", "residual_gated")),
+        dialogue_memory_ablation_mode=str(model_cfg.get("dialogue_memory_ablation_mode", model_cfg.get("memory_ablation_mode", "normal"))),
+        interaction_memory_ablation_mode=str(
+            model_cfg.get("interaction_memory_ablation_mode", model_cfg.get("temporal_memory_ablation_mode", "normal"))
+        ),
+        dialogue_memory_shuffle_seed=int(model_cfg.get("dialogue_memory_shuffle_seed", model_cfg.get("memory_shuffle_seed", 0))),
+        interaction_memory_shuffle_seed=int(
+            model_cfg.get("interaction_memory_shuffle_seed", model_cfg.get("temporal_memory_shuffle_seed", 0))
+        ),
     )
     return WavLMDualBranchCIMSerModel(config)

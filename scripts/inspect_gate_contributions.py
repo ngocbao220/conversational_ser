@@ -17,7 +17,7 @@ if str(ROOT) not in sys.path:
 
 from models.wavlm_dual_branch_cim import build_wavlm_dual_branch_cim_ser_model
 from scripts.train_dual_branch import configure_trainable_gates
-from scripts.train_wavlm_cim import append_log, prepare_dialogues, resolve_device, set_seed
+from scripts.train_cim import append_log, prepare_dialogues, resolve_device, set_seed
 from utils.dialogue_embeddings import DialogueEmbedding, TrainableWavLMMeanExtractor
 from utils.iemocap_kaggle import ID2LABEL, LABEL_NAMES
 from utils.temporal_features import (
@@ -177,9 +177,10 @@ def run_inspection(
                     "speaker_id": row.get("speaker_id", ""),
                     "start_time": float(row.get("start_time", 0.0)),
                     "end_time": float(row.get("end_time", 0.0)),
-                    "gold_label": ID2LABEL[int(labels_cpu[index])],
+                    "gold_label": ID2LABEL.get(int(labels_cpu[index]), "context"),
                     "pred_label": ID2LABEL[int(predictions[index])],
-                    "correct": bool(int(labels_cpu[index]) == int(predictions[index])),
+                    "is_target_label": bool(int(labels_cpu[index]) >= 0),
+                    "correct": bool(int(labels_cpu[index]) >= 0 and int(labels_cpu[index]) == int(predictions[index])),
                     "fusion_mode": str(output["fusion_mode"]),
                     "alpha_value": alpha_value,
                     "beta_value": beta_value,
@@ -194,7 +195,7 @@ def run_inspection(
                 }
                 for feature_name in temporal_builder.stats.feature_names:
                     record[feature_name] = float(row.get(feature_name, 0.0))
-                for label_idx, label_name in ID2LABEL.items():
+                for label_idx, label_name in enumerate(LABEL_NAMES):
                     record[f"prob_{label_name}"] = float(probabilities[index][label_idx])
                 rows.append(record)
 

@@ -92,6 +92,13 @@ CIM_INTERACTION_4_FEATURE_NAMES = [
     "speaker_prev_overlap_rate",
 ]
 
+CIM_4_NEW_FEATURE_NAMES = [
+    "relative_gap",
+    "overlap_ratio",
+    "duration",
+    "speaker_switch",
+]
+
 CIM_SELECTED_8_FEATURE_NAMES = [
     "duration",
     "overlap_ratio",
@@ -119,6 +126,7 @@ TEMPORAL_FEATURE_SETS = {
     "recommended_v2": CIM_V2_RECOMMENDED_FEATURE_NAMES,
     "selected_primitives": CIM_SELECTED_PRIMITIVE_FEATURE_NAMES,
     "interaction_4": CIM_INTERACTION_4_FEATURE_NAMES,
+    "cim_4_new": CIM_4_NEW_FEATURE_NAMES,
     "selected_8": CIM_SELECTED_8_FEATURE_NAMES,
     "selected_8_turn": CIM_SELECTED_8_TURN_FEATURE_NAMES,
 }
@@ -395,7 +403,10 @@ class TemporalInteractionFeatureBuilder:
             duration = max(0.0, end_time - start_time)
             speaker_id = str(row["speaker_id"])
 
-            if previous_row is None:
+            filtered_since_previous = int(row.get("filtered_utterances_since_previous", 0))
+            temporal_context_contiguous = bool(row.get("temporal_context_contiguous", filtered_since_previous == 0))
+            has_contiguous_previous = previous_row is not None and temporal_context_contiguous and filtered_since_previous == 0
+            if not has_contiguous_previous:
                 gap_prev = 0.0
                 overlap_prev = 0.0
                 previous_speaker = None
@@ -487,6 +498,7 @@ class TemporalInteractionFeatureBuilder:
                 "window3_gap_variance": window3_gap_variance,
                 "window5_gap_variance": window5_gap_variance,
                 "relative_gap_to_speaker_mean": relative_gap_to_speaker_mean,
+                "relative_gap": relative_gap_to_speaker_mean,
                 "silence_density_10s": silence_density_10s,
                 "interaction_density_10s": interaction_density_10s,
                 "rhythm_variance_window5": window5_gap_variance,
@@ -505,6 +517,8 @@ class TemporalInteractionFeatureBuilder:
                 "speaker_prev_turn_count_norm": speaker_prev_turn_count_norm,
                 "speaker_dominance_time_so_far": history["duration_sum"] / max(total_time_so_far, self.eps),
                 "speaker_persistence_so_far": history["same_speaker_count"] / max(previous_turns, 1.0),
+                "filtered_utterances_since_previous": float(filtered_since_previous),
+                "temporal_context_contiguous": 1.0 if has_previous else 0.0,
             }
             features.append(row_features)
 

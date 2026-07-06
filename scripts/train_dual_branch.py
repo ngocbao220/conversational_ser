@@ -17,7 +17,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from models.wavlm_dual_branch_cim import WavLMDualBranchCIMSerModel, build_wavlm_dual_branch_cim_ser_model
-from scripts.train_wavlm_cim import (
+from scripts.train_cim import (
     append_log,
     class_weights_from_dialogues,
     create_scheduler,
@@ -203,6 +203,8 @@ def save_dual_branch_predictions_csv(path: str | Path, rows: Sequence[Mapping[st
         "speaker_id",
         "start_time",
         "end_time",
+        "raw_label",
+        "is_target_label",
         "gold_label",
         "pred_label",
         *[f"prob_{label}" for label in LABEL_NAMES],
@@ -262,10 +264,12 @@ def rows_for_subset(rows: Sequence[Mapping[str, Any]], subset_name: str, strong_
 
 def metrics_for_prediction_rows(rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
     label_to_id = {label: idx for idx, label in enumerate(LABEL_NAMES)}
-    targets = [label_to_id[str(row["gold_label"])] for row in rows]
-    predictions = [label_to_id[str(row["pred_label"])] for row in rows]
+    valid_rows = [row for row in rows if str(row.get("gold_label")) in label_to_id]
+    targets = [label_to_id[str(row["gold_label"])] for row in valid_rows]
+    predictions = [label_to_id[str(row["pred_label"])] for row in valid_rows]
     metrics = compute_ser_metrics(targets, predictions, LABEL_NAMES)
-    metrics["num_samples"] = len(rows)
+    metrics["num_samples"] = len(valid_rows)
+    metrics["num_context_only"] = len(rows) - len(valid_rows)
     return metrics
 
 
@@ -329,6 +333,8 @@ def run_dual_branch_dialogue_epoch(
             else dialogue.embeddings.to(device)
         )
         labels = dialogue.labels.to(device)
+        valid_mask = labels >= 0
+        has_valid = bool(valid_mask.any().item())
         temporal_features = temporal_policy.apply(
             temporal_builder.transform_dialogue(dialogue), dialogue.dialogue_id
         ).to(device)
@@ -336,8 +342,12 @@ def run_dual_branch_dialogue_epoch(
         with torch.set_grad_enabled(is_train):
             output = model(embeddings=embeddings, temporal_features=temporal_features, labels=None)
             logits = output["logits"]
-            loss = torch.nn.functional.cross_entropy(logits, labels, weight=class_weights)
-            if is_train:
+            loss = (
+                torch.nn.functional.cross_entropy(logits, labels, weight=class_weights, ignore_index=-100)
+                if has_valid
+                else logits.sum() * 0.0
+            )
+            if is_train and has_valid:
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(trainable_parameters(model, wavlm_extractor), max_grad_norm)
                 optimizer.step()
@@ -352,20 +362,25 @@ def run_dual_branch_dialogue_epoch(
         temporal_norms = output["temporal_residuals"].detach().norm(dim=-1).cpu().numpy()
         alpha_value = float(output["alpha_value"])
         beta_value = float(output["beta_value"])
-        losses.append(float(loss.detach().cpu().item()))
-        predictions.extend(int(value) for value in batch_predictions)
-        targets.extend(int(value) for value in batch_targets)
+        if has_valid:
+            losses.append(float(loss.detach().cpu().item()))
 
         for index, pred_id in enumerate(batch_predictions):
             row = dialogue.rows[index]
             gold_id = int(batch_targets[index])
+            is_target_label = gold_id >= 0
+            if is_target_label:
+                predictions.append(int(pred_id))
+                targets.append(gold_id)
             prediction_row = {
                 "dialogue_id": row["dialogue_id"],
                 "utterance_id": row["utterance_id"],
                 "speaker_id": row["speaker_id"],
                 "start_time": float(row["start_time"]),
                 "end_time": float(row["end_time"]),
-                "gold_label": ID2LABEL[gold_id],
+                "raw_label": row.get("raw_label", ""),
+                "is_target_label": is_target_label,
+                "gold_label": ID2LABEL.get(gold_id, "context"),
                 "pred_label": ID2LABEL[int(pred_id)],
                 "alpha_value": alpha_value,
                 "beta_value": beta_value,
@@ -374,17 +389,17 @@ def run_dual_branch_dialogue_epoch(
             }
             for feature_name in PREDICTION_TEMPORAL_COLUMNS:
                 prediction_row[feature_name] = float(row.get(feature_name, 0.0))
-            for label_idx, label_name in ID2LABEL.items():
+            for label_idx, label_name in enumerate(LABEL_NAMES):
                 prediction_row[f"prob_{label_name}"] = float(probabilities[index][label_idx])
             prediction_rows.append(prediction_row)
             residual_rows.append(
                 {
                     **prediction_row,
-                    "correct": bool(pred_id == gold_id),
+                    "correct": bool(is_target_label and pred_id == gold_id),
                 }
             )
         if progress:
-            iterator.set_postfix(loss=f"{np.mean(losses):.4f}")
+            iterator.set_postfix(loss=f"{np.mean(losses):.4f}" if losses else "nan")
 
     return {
         "loss": float(np.mean(losses)) if losses else 0.0,
@@ -818,6 +833,14 @@ def main() -> None:
         ),
     )
     append_log(log_path, f"temporal_feature_set={temporal_feature_set} dim={config['model']['temporal_feature_dim']}")
+    append_log(
+        log_path,
+        "memory_ablation="
+        f"dialogue={config['model'].get('dialogue_memory_ablation_mode', config['model'].get('memory_ablation_mode', 'normal'))} "
+        f"interaction={config['model'].get('interaction_memory_ablation_mode', config['model'].get('temporal_memory_ablation_mode', 'normal'))} "
+        f"dialogue_shuffle_seed={config['model'].get('dialogue_memory_shuffle_seed', config['model'].get('memory_shuffle_seed', 0))} "
+        f"interaction_shuffle_seed={config['model'].get('interaction_memory_shuffle_seed', config['model'].get('temporal_memory_shuffle_seed', 0))}",
+    )
     append_log(log_path, f"parameters total={counts['total']:,} trainable={counts['trainable']:,}")
     if wavlm_extractor is not None:
         append_log(log_path, f"parameters wavlm total={wavlm_counts['total']:,} trainable={wavlm_counts['trainable']:,}")

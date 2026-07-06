@@ -57,6 +57,26 @@ def mean_pool_hidden_states(hidden_states: torch.Tensor, mask: Optional[torch.Te
     return torch.sum(hidden_states * mask, dim=1) / torch.clamp(mask.sum(dim=1), min=1.0)
 
 
+def attentive_statistics_pool_hidden_states(hidden_states: torch.Tensor, mask: Optional[torch.Tensor]) -> torch.Tensor:
+    scores = torch.linalg.vector_norm(hidden_states, dim=-1)
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, torch.finfo(scores.dtype).min)
+    weights = torch.softmax(scores, dim=1).unsqueeze(-1)
+    mean = torch.sum(hidden_states * weights, dim=1)
+    variance = torch.sum(((hidden_states - mean.unsqueeze(1)) ** 2) * weights, dim=1)
+    std = torch.sqrt(torch.clamp(variance, min=1e-6))
+    return torch.cat([mean, std], dim=-1)
+
+
+def pool_hidden_states(hidden_states: torch.Tensor, mask: Optional[torch.Tensor], pooling: str) -> torch.Tensor:
+    pooling = str(pooling)
+    if pooling == "mean":
+        return mean_pool_hidden_states(hidden_states, mask)
+    if pooling == "attentive_statistics":
+        return attentive_statistics_pool_hidden_states(hidden_states, mask)
+    raise ValueError(f"Unsupported pooling={pooling!r}. Expected one of: mean, attentive_statistics.")
+
+
 def precompute_wavlm_mean_embeddings(
     samples: Sequence[ConversationSERSample],
     wavlm_model_name: str,
@@ -66,6 +86,7 @@ def precompute_wavlm_mean_embeddings(
     device: torch.device,
     max_duration_seconds: Optional[float] = None,
     progress: bool = True,
+    pooling: str = "mean",
 ) -> Dict[str, Dict[str, Any]]:
     from transformers import AutoFeatureExtractor, AutoModel
 
@@ -87,7 +108,7 @@ def precompute_wavlm_mean_embeddings(
     model.eval()
 
     rows_by_utterance: Dict[str, Dict[str, Any]] = {}
-    iterator = tqdm(dataloader, desc="precompute fixed mean-pooled WavLM embeddings", disable=not progress, dynamic_ncols=True)
+    iterator = tqdm(dataloader, desc=f"precompute fixed {pooling} WavLM embeddings", disable=not progress, dynamic_ncols=True)
     with torch.no_grad():
         for batch in iterator:
             input_values = batch["input_values"].to(device)
@@ -97,7 +118,7 @@ def precompute_wavlm_mean_embeddings(
             outputs = model(input_values=input_values, attention_mask=attention_mask)
             hidden_states = outputs.last_hidden_state
             feature_mask = _feature_attention_mask(model, attention_mask, hidden_states.shape[1])
-            embeddings = mean_pool_hidden_states(hidden_states, feature_mask).detach().cpu()
+            embeddings = pool_hidden_states(hidden_states, feature_mask, pooling=pooling).detach().cpu()
             for index, utterance_id in enumerate(batch["utterance_id"]):
                 row = {
                     "embedding": embeddings[index],
@@ -109,6 +130,12 @@ def precompute_wavlm_mean_embeddings(
                     "start_time": float(batch["start_time"][index].item()),
                     "end_time": float(batch["end_time"][index].item()),
                     "label_name": batch["label_name"][index],
+                    "raw_label": batch.get("raw_label", [""] * len(batch["utterance_id"]))[index],
+                    "is_target_label": bool(batch.get("is_target_label", batch["labels"] >= 0)[index].item()),
+                    "raw_turn_index": int(batch.get("raw_turn_index", torch.full_like(batch["labels"], -1))[index].item()),
+                    "labelled_turn_index": int(batch.get("labelled_turn_index", torch.full_like(batch["labels"], -1))[index].item()),
+                    "filtered_utterances_since_previous": int(batch.get("filtered_utterances_since_previous", torch.zeros_like(batch["labels"]))[index].item()),
+                    "temporal_context_contiguous": bool(batch.get("temporal_context_contiguous", torch.ones_like(batch["labels"], dtype=torch.bool))[index].item()),
                 }
                 rows_by_utterance[utterance_id] = row
     return rows_by_utterance
@@ -134,6 +161,12 @@ def build_dialogue_embeddings(
                     "start_time": sample.start_time,
                     "end_time": sample.end_time,
                     "label_name": sample.label_name,
+                    "raw_label": sample.raw_label,
+                    "is_target_label": sample.is_target_label,
+                    "raw_turn_index": sample.raw_turn_index,
+                    "labelled_turn_index": sample.labelled_turn_index,
+                    "filtered_utterances_since_previous": sample.filtered_utterances_since_previous,
+                    "temporal_context_contiguous": sample.temporal_context_contiguous,
                 }
             )
             rows.append(row)

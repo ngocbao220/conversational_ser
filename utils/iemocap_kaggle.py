@@ -17,24 +17,24 @@ from torch.utils.data import Dataset
 
 LABEL_NAMES = ["angry", "happy", "neutral", "sad"]
 LABEL2ID = {"angry": 0, "happy": 1, "neutral": 2, "sad": 3}
+IGNORE_LABEL_ID = -100
+CONTEXT_LABEL_NAME = "context"
 ID2LABEL = {idx: label for label, idx in LABEL2ID.items()}
-LABEL_MAPPING_VERSION = "iemocap_emotion_8_to_4_v1"
+ID2LABEL[IGNORE_LABEL_ID] = CONTEXT_LABEL_NAME
+LABEL_MAPPING_VERSION = "iemocap_strict4_context_timeline_v4"
 
-# Every emotion label with a semantic 4-class destination is retained.
-# `xxx` means annotators did not agree and `oth` has no defensible 4-class
-# target, so neither may be used as a supervised gold label.
+# Strict 4-class IEMOCAP policy: retain canonical labels and map only
+# excited -> happy. Other raw labels remain in the dialogue as context-only
+# turns and are ignored by supervised loss/metrics.
 RAW_LABEL_MAP = {
     "ang": "angry",
-    "fru": "angry",
-    "dis": "angry",
     "hap": "happy",
     "exc": "happy",
-    "sur": "happy",
     "neu": "neutral",
     "sad": "sad",
-    "fea": "sad",
 }
-UNLABELED_RAW_LABELS = {"xxx", "oth"}
+CONTEXT_ONLY_RAW_LABELS = {"fru", "dis", "sur", "fea", "xxx", "oth"}
+UNLABELED_RAW_LABELS = CONTEXT_ONLY_RAW_LABELS
 MELD_RAW_LABEL_MAP = {
     "anger": "angry",
     "angry": "angry",
@@ -73,6 +73,11 @@ class ConversationSERSample:
     transcript: str = ""
     raw_label: str = ""
     split_name: str = ""
+    raw_turn_index: int = -1
+    labelled_turn_index: int = -1
+    filtered_utterances_since_previous: int = 0
+    temporal_context_contiguous: bool = True
+    is_target_label: bool = True
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -109,23 +114,37 @@ def parse_transcription_file(path: Path) -> Dict[str, Dict[str, Any]]:
 
 def parse_emotion_file(path: Path) -> Dict[str, Dict[str, Any]]:
     rows: Dict[str, Dict[str, Any]] = {}
+    raw_turn_index = -1
+    labelled_turn_index = -1
+    previous_labelled_raw_turn_index: int | None = None
     with path.open("r", encoding="utf-8", errors="ignore") as handle:
         for line in handle:
             match = EVAL_RE.match(line.strip())
             if not match:
                 continue
+            raw_turn_index += 1
             utterance_id = match.group("utterance_id")
             raw_label = match.group("label")
             label_name = RAW_LABEL_MAP.get(raw_label)
-            if label_name is None:
-                continue
+            is_target = label_name is not None
+            labelled_turn_index += 1
+            if previous_labelled_raw_turn_index is None:
+                filtered_since_previous = 0
+            else:
+                filtered_since_previous = max(0, raw_turn_index - previous_labelled_raw_turn_index - 1)
             rows[utterance_id] = {
                 "start_time": float(match.group("start")),
                 "end_time": float(match.group("end")),
                 "raw_label": raw_label,
-                "label_name": label_name,
-                "label": LABEL2ID[label_name],
+                "label_name": label_name if is_target else CONTEXT_LABEL_NAME,
+                "label": LABEL2ID[label_name] if is_target else IGNORE_LABEL_ID,
+                "is_target_label": is_target,
+                "raw_turn_index": raw_turn_index,
+                "labelled_turn_index": labelled_turn_index,
+                "filtered_utterances_since_previous": filtered_since_previous,
+                "temporal_context_contiguous": filtered_since_previous == 0,
             }
+            previous_labelled_raw_turn_index = raw_turn_index
     return rows
 
 
@@ -232,6 +251,11 @@ def discover_iemocap_samples(
                         end_time=end_time,
                         transcript=str(transcript_row.get("transcript", "")),
                         raw_label=str(annotation["raw_label"]),
+                        raw_turn_index=int(annotation.get("raw_turn_index", -1)),
+                        labelled_turn_index=int(annotation.get("labelled_turn_index", -1)),
+                        filtered_utterances_since_previous=int(annotation.get("filtered_utterances_since_previous", 0)),
+                        temporal_context_contiguous=bool(annotation.get("temporal_context_contiguous", True)),
+                        is_target_label=bool(annotation.get("is_target_label", int(annotation.get("label", IGNORE_LABEL_ID)) != IGNORE_LABEL_ID)),
                     )
                 )
     if not samples:
@@ -572,5 +596,15 @@ class ConversationalSERCollator:
         encoded["start_time"] = torch.tensor([float(row["start_time"]) for row in rows], dtype=torch.float32)
         encoded["end_time"] = torch.tensor([float(row["end_time"]) for row in rows], dtype=torch.float32)
         encoded["label_name"] = [str(row["label_name"]) for row in rows]
+        encoded["raw_label"] = [str(row.get("raw_label", "")) for row in rows]
         encoded["audio_path"] = [str(row["audio_path"]) for row in rows]
+        encoded["raw_turn_index"] = torch.tensor([int(row.get("raw_turn_index", -1)) for row in rows], dtype=torch.long)
+        encoded["labelled_turn_index"] = torch.tensor([int(row.get("labelled_turn_index", -1)) for row in rows], dtype=torch.long)
+        encoded["filtered_utterances_since_previous"] = torch.tensor(
+            [int(row.get("filtered_utterances_since_previous", 0)) for row in rows], dtype=torch.long
+        )
+        encoded["temporal_context_contiguous"] = torch.tensor(
+            [bool(row.get("temporal_context_contiguous", True)) for row in rows], dtype=torch.bool
+        )
+        encoded["is_target_label"] = torch.tensor([bool(row.get("is_target_label", int(row.get("label", -100)) >= 0)) for row in rows], dtype=torch.bool)
         return encoded

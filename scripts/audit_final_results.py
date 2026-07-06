@@ -133,15 +133,15 @@ def expected_runs() -> list[ExpectedRun]:
         ("wav2vec", "facebook/wav2vec2-base"),
         ("hubert", "facebook/hubert-base-ls960"),
     ]:
-        add("main", f"{backbone} / Baseline", f"results/main/{backbone}/baseline", f"configs/main_{backbone}_baseline.yaml", "scripts.train_wavlm_baseline", {**common, "model.wavlm_model_name": model_name})
-        add("main", f"{backbone} / CDM", f"results/main/{backbone}/cdm", f"configs/main_{backbone}_cdm.yaml", "scripts.train_wavlm_cdm", {**common, "model.wavlm_model_name": model_name, "model.memory_ablation_mode": "normal"})
+        add("main", f"{backbone} / Baseline", f"results/main/{backbone}/baseline", f"configs/main_{backbone}_baseline.yaml", "scripts.train_baseline", {**common, "model.wavlm_model_name": model_name})
+        add("main", f"{backbone} / CDM", f"results/main/{backbone}/cdm", f"configs/main_{backbone}_cdm.yaml", "scripts.train_cdm", {**common, "model.wavlm_model_name": model_name, "model.memory_ablation_mode": "normal"})
         add("main", f"{backbone} / CIM", f"results/main/{backbone}/cim", f"configs/main_{backbone}_cim.yaml", "scripts.train_dual_branch", {**cim4, "model.wavlm_model_name": model_name})
         add("main", f"{backbone} / CDM + CIM", f"results/main/{backbone}/cdm_cim", f"configs/main_{backbone}_cdm_cim.yaml", "scripts.train_dual_branch", {**cdm_cim4, "model.wavlm_model_name": model_name})
 
-    add("cdm_ablation", "CDM zero", "results/cdm_ablation/zero", "configs/cdm_ablation_zero.yaml", "scripts.train_wavlm_cdm", {**common, "model.memory_ablation_mode": "zero_state"})
-    add("cdm_ablation", "CDM shuffled", "results/cdm_ablation/shuffled", "configs/cdm_ablation_shuffled.yaml", "scripts.train_wavlm_cdm", {**common, "model.memory_ablation_mode": "shuffled_order"})
-    add("cdm_ablation", "CDM reverse", "results/cdm_ablation/reverse", "configs/cdm_ablation_reverse.yaml", "scripts.train_wavlm_cdm", {**common, "model.memory_ablation_mode": "reverse_order"})
-    add("cdm_ablation", "CDM full", "results/cdm_ablation/full", "configs/cdm_ablation_full.yaml", "scripts.train_wavlm_cdm", {**common, "model.memory_ablation_mode": "normal"})
+    add("cdm_ablation", "CDM zero", "results/cdm_ablation/zero", "configs/cdm_ablation_zero.yaml", "scripts.train_cdm", {**common, "model.memory_ablation_mode": "zero_state"})
+    add("cdm_ablation", "CDM shuffled", "results/cdm_ablation/shuffled", "configs/cdm_ablation_shuffled.yaml", "scripts.train_cdm", {**common, "model.memory_ablation_mode": "shuffled_order"})
+    add("cdm_ablation", "CDM reverse", "results/cdm_ablation/reverse", "configs/cdm_ablation_reverse.yaml", "scripts.train_cdm", {**common, "model.memory_ablation_mode": "reverse_order"})
+    add("cdm_ablation", "CDM full", "results/cdm_ablation/full", "configs/cdm_ablation_full.yaml", "scripts.train_cdm", {**common, "model.memory_ablation_mode": "normal"})
 
     add("cim_ablation", "CIM zero", "results/cim_ablation/zero", "configs/cim_ablation_zero.yaml", "scripts.train_dual_branch", {**cim4, "model.temporal_input_mode": "zero"})
     add("cim_ablation", "CIM shuffled", "results/cim_ablation/shuffled", "configs/cim_ablation_shuffled.yaml", "scripts.train_dual_branch", {**cim4, "model.temporal_input_mode": "shuffled"})

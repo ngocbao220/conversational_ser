@@ -22,10 +22,12 @@ def read_prediction_rows(path: str | Path) -> list[dict[str, Any]]:
 
 
 def metrics_for_rows(rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
-    targets = [LABEL2ID[str(row["gold_label"])] for row in rows]
-    predictions = [LABEL2ID[str(row["pred_label"])] for row in rows]
+    valid_rows = [row for row in rows if str(row.get("gold_label")) in LABEL2ID]
+    targets = [LABEL2ID[str(row["gold_label"])] for row in valid_rows]
+    predictions = [LABEL2ID[str(row["pred_label"])] for row in valid_rows]
     metrics = compute_ser_metrics(targets, predictions, LABEL_NAMES)
-    metrics["num_samples"] = len(rows)
+    metrics["num_samples"] = len(valid_rows)
+    metrics["num_context_only"] = len(rows) - len(valid_rows)
     return metrics
 
 

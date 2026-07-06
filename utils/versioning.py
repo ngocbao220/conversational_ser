@@ -13,7 +13,7 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "name": "baseline",
         "result_group": "baseline",
         "result_name": "wavlm",
-        "trainer_module": "scripts.train_wavlm_baseline",
+        "trainer_module": "scripts.train_baseline",
         "experiment_name": "baseline",
         "model_remove_keys": [
             "use_cdm_memory",
@@ -48,7 +48,7 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "name": "cdm",
         "result_group": "cdm_ablations",
         "result_name": "full",
-        "trainer_module": "scripts.train_wavlm_cdm",
+        "trainer_module": "scripts.train_cdm",
         "experiment_name": "cdm",
         "model_remove_keys": [
             "use_cdm_memory",
@@ -83,7 +83,7 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "name": "cim_concat_v1",
         "result_group": "cm_ablations",
         "result_name": "cim_concat_v1",
-        "trainer_module": "scripts.train_wavlm_cim",
+        "trainer_module": "scripts.train_cim",
         "experiment_name": "cim_concat_v1",
         "model_overrides": {
             "temporal_feature_set": "v1",
@@ -151,7 +151,7 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "name": "cim_concat_recommended",
         "result_group": "cm_ablations",
         "result_name": "cim_concat_recommended",
-        "trainer_module": "scripts.train_wavlm_cim",
+        "trainer_module": "scripts.train_cim",
         "experiment_name": "cim_concat_recommended",
         "model_overrides": {
             "temporal_feature_set": "recommended_v2",
@@ -164,7 +164,7 @@ VERSION_REGISTRY: dict[str, dict[str, Any]] = {
         "name": "cim_concat_compact",
         "result_group": "cm_ablations",
         "result_name": "cim_concat_compact",
-        "trainer_module": "scripts.train_wavlm_cim",
+        "trainer_module": "scripts.train_cim",
         "experiment_name": "cim_concat_compact",
         "model_overrides": {
             "temporal_feature_set": "selected_primitives",
@@ -228,7 +228,7 @@ SETTING_REGISTRY: dict[str, dict[str, Any]] = {
         "training": {
             "batch_size": 8,
             "eval_batch_size": 8,
-            "max_epochs": 250,
+            "max_epochs": 150,
             "wavlm_batch_size": 4,
             "eval_wavlm_batch_size": 8,
             "learning_rate": 2e-5,
