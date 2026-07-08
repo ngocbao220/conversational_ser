@@ -17,6 +17,8 @@ class WavLMCIMConfig:
     memory_dim: int = 256
     dropout: float = 0.2
     residual_gate_init: float = 0.0
+    memory_input_mode: str = "full"
+    memory_fusion_mode: str = "concat"
 
 
 class TemporalFeatureEncoder(nn.Module):
@@ -75,14 +77,20 @@ class WavLMCIMSerModel(nn.Module):
     def __init__(self, config: WavLMCIMConfig) -> None:
         super().__init__()
         self.config = config
+        if config.memory_input_mode not in {"full", "acoustic_only", "temporal_only"}:
+            raise ValueError("memory_input_mode must be one of: full, acoustic_only, temporal_only.")
+        if config.memory_fusion_mode not in {"concat", "sum"}:
+            raise ValueError("memory_fusion_mode must be one of: concat, sum.")
+        temporal_output_dim = config.embedding_dim if config.memory_fusion_mode == "sum" else config.temporal_emb_dim
+        memory_input_dim = config.embedding_dim if config.memory_fusion_mode == "sum" else config.embedding_dim + config.temporal_emb_dim
         self.temporal_encoder = TemporalFeatureEncoder(
             input_dim=config.temporal_feature_dim,
-            temporal_emb_dim=config.temporal_emb_dim,
+            temporal_emb_dim=temporal_output_dim,
             hidden_dim=config.temporal_hidden_dim,
             dropout=config.dropout,
         )
         self.memory = CIMMemoryModule(
-            input_dim=config.embedding_dim + config.temporal_emb_dim,
+            input_dim=memory_input_dim,
             output_dim=config.embedding_dim,
             memory_dim=config.memory_dim,
             dropout=config.dropout,
@@ -107,7 +115,16 @@ class WavLMCIMSerModel(nn.Module):
                 f"({embeddings.shape[0]}, {self.config.temporal_feature_dim}), got {tuple(temporal_features.shape)}."
             )
         temporal_embeddings = self.temporal_encoder(temporal_features)
-        memory_inputs = torch.cat([embeddings, temporal_embeddings], dim=-1)
+        memory_acoustic = embeddings
+        memory_temporal = temporal_embeddings
+        if self.config.memory_input_mode == "acoustic_only":
+            memory_temporal = torch.zeros_like(memory_temporal)
+        elif self.config.memory_input_mode == "temporal_only":
+            memory_acoustic = torch.zeros_like(memory_acoustic)
+        if self.config.memory_fusion_mode == "sum":
+            memory_inputs = memory_acoustic + memory_temporal
+        else:
+            memory_inputs = torch.cat([memory_acoustic, memory_temporal], dim=-1)
         memory_read, final_state = self.memory(memory_inputs)
         fused = embeddings + torch.tanh(self.alpha) * memory_read
         logits = self.classifier(fused)
@@ -127,5 +144,7 @@ def build_wavlm_cim_ser_model(model_cfg: dict, embedding_dim: int) -> WavLMCIMSe
         memory_dim=int(model_cfg.get("memory_dim", 256)),
         dropout=float(model_cfg.get("dropout", 0.2)),
         residual_gate_init=float(model_cfg.get("residual_gate_init", 0.0)),
+        memory_input_mode=str(model_cfg.get("memory_input_mode", "full")),
+        memory_fusion_mode=str(model_cfg.get("memory_fusion_mode", "concat")),
     )
     return WavLMCIMSerModel(config)

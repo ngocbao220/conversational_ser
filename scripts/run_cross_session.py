@@ -19,6 +19,7 @@ TRAINER_MODULES = {
     "cdm": "scripts.train_cdm",
     "cim": "scripts.train_cim",
     "dual_branch": "scripts.train_dual_branch",
+    "fusion": "scripts.train_fusion",
 }
 METRIC_NAMES = ("WA", "UA", "WF1", "Macro-F1")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

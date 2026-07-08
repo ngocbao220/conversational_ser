@@ -124,8 +124,22 @@ def configure_phase_trainability(
         set_requires_grad(model.classifier, True)
         model.beta.requires_grad_(True)
         model.alpha.requires_grad_(False)
+    elif phase == "phase_2_temporal_isolated":
+        set_requires_grad(model.temporal_encoder, True)
+        set_requires_grad(model.temporal_branch, True)
+        set_requires_grad(model.classifier, True)
+        with torch.no_grad():
+            model.alpha.fill_(0.0)
+        model.alpha.requires_grad_(False)
+        model.beta.requires_grad_(True)
     elif phase == "phase_3_fusion":
         set_requires_grad(model, True)
+    elif phase == "phase_3_fusion_head":
+        # Freeze the pretrained dialogue/interaction branches and learn only the
+        # fusion gates plus the final classifier on top of their fixed residuals.
+        set_requires_grad(model.classifier, True)
+        model.alpha.requires_grad_(True)
+        model.beta.requires_grad_(True)
     else:
         raise ValueError(f"Unsupported training phase: {phase_name!r}")
     configure_trainable_gates(model, model_cfg)
@@ -173,6 +187,24 @@ def staged_phase_plan(training_stage: Mapping[str, Any], default_max_epochs: int
                 "enabled": bool(training_stage.get("stage_3_finetune_fusion", True)),
             },
         ]
+    if mode == "branch_pretrain_fusion_head":
+        return [
+            {
+                "name": "phase_1_dialogue",
+                "epochs": int(training_stage.get("stage_1_epochs", default_max_epochs)),
+                "enabled": bool(training_stage.get("stage_1_train_dialogue_branch", True)),
+            },
+            {
+                "name": "phase_2_temporal_isolated",
+                "epochs": int(training_stage.get("stage_2_epochs", default_max_epochs)),
+                "enabled": bool(training_stage.get("stage_2_train_temporal_branch", True)),
+            },
+            {
+                "name": "phase_3_fusion_head",
+                "epochs": int(training_stage.get("stage_3_epochs", max(1, default_max_epochs // 2))),
+                "enabled": bool(training_stage.get("stage_3_train_fusion_head", True)),
+            },
+        ]
     if mode == "temporal_first_3_phase":
         return [
             {
@@ -191,7 +223,10 @@ def staged_phase_plan(training_stage: Mapping[str, Any], default_max_epochs: int
                 "enabled": bool(training_stage.get("stage_3_finetune_fusion", True)),
             },
         ]
-    raise ValueError("training_stage.mode must be one of: end_to_end, 3_phase, temporal_first_3_phase")
+    raise ValueError(
+        "training_stage.mode must be one of: end_to_end, 3_phase, "
+        "branch_pretrain_fusion_head, temporal_first_3_phase"
+    )
 
 
 def save_dual_branch_predictions_csv(path: str | Path, rows: Sequence[Mapping[str, Any]]) -> None:

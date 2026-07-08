@@ -1,6 +1,6 @@
-run_name: correct_data_features_4new_wavlm_cim
-experiment_name: correct_data_features_4new_wavlm_cim
-output_dir: results/correct_data/features/4new/wavlm/cim
+run_name: correct_data_features_4new_wav2vec_cim_drop_relative_gap
+experiment_name: correct_data_features_4new_wav2vec_cim_drop_relative_gap
+output_dir: results/correct_data/features/4new/wav2vec/cim_drop_relative_gap
 seed: 42
 dataset:
   name: iemocap
@@ -12,7 +12,7 @@ dataset:
   sampling_rate: 16000
   max_duration_seconds: null
 model:
-  wavlm_model_name: microsoft/wavlm-base
+  wavlm_model_name: facebook/wav2vec2-base
   freeze_wavlm: true
   unfreeze_last_n_layers: 0
   num_labels: 4
@@ -29,17 +29,19 @@ model:
   fix_beta_zero: false
   temporal_input_mode: real
   disabled_temporal_feature_groups: []
-  disabled_temporal_features: []
+  disabled_temporal_features:
+  - relative_gap
   temporal_shuffle_seed: 0
   short_gap_threshold: 0.3
   long_gap_threshold: 1.0
   overlap_threshold: 0.05
   use_temporal_features: true
   temporal_feature_mode: real
+  memory_input_mode: full
 precompute:
   enabled: true
   pooling: mean
-  cache_path: results/correct_data/shared_cache/wavlm_mean_embeddings.pt
+  cache_path: results/correct_data/shared_cache/wav2vec_mean_embeddings.pt
   force_recompute: false
   batch_size: 16
 cross_session:
@@ -73,6 +75,6 @@ analysis:
 wandb:
   use_wandb: true
   project: conversational-SER
-  run_name: correct_data_features_4new_wavlm_cim
+  run_name: correct_data_features_4new_wav2vec_cim_drop_relative_gap
   entity: null
   mode: online

@@ -15,3 +15,8 @@ results/**
 !results/**/summary.ipynb
 data/
 output/
+correct_result/**
+*.pth
+*.wandb
+wandb/
+**/wandb/

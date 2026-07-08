@@ -539,7 +539,7 @@ def main() -> None:
     append_log(
         log_path,
         (
-            f"temporal_feature_mode={config['model']['temporal_feature_mode']} "
+            f"temporal_feature_mode={config['model'].get('temporal_feature_mode', 'real')} "
             f"feature_set={temporal_feature_set} dim={config['model']['temporal_feature_dim']}"
         ),
     )

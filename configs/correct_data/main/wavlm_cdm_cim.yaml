@@ -34,6 +34,7 @@ model:
   short_gap_threshold: 0.3
   long_gap_threshold: 1.0
   overlap_threshold: 0.05
+  temporal_feature_mode: real
 precompute:
   enabled: true
   pooling: mean
