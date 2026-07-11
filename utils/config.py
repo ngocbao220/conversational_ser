@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from typing import Any, Dict
+from typing import Any, Dict, Mapping, Sequence
 
 
 def str_to_bool(value: str | bool) -> bool:
@@ -14,6 +14,49 @@ def str_to_bool(value: str | bool) -> bool:
         return False
     raise argparse.ArgumentTypeError(f"Expected boolean value, got {value!r}.")
 
+
+
+def format_config_tree(config: Mapping[str, Any], *, title: str = "Run config") -> str:
+    """Render a nested config mapping as a compact tree for logs."""
+
+    def scalar(value: Any) -> str:
+        if value is None:
+            return "null"
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        return str(value)
+
+    def render(value: Any, prefix: str = "") -> list[str]:
+        lines: list[str] = []
+        if isinstance(value, Mapping):
+            items = list(value.items())
+            for index, (key, child) in enumerate(items):
+                is_last = index == len(items) - 1
+                branch = "`-- " if is_last else "|-- "
+                child_prefix = "    " if is_last else "|   "
+                if isinstance(child, (Mapping, list, tuple)):
+                    lines.append(f"{prefix}{branch}{key}")
+                    lines.extend(render(child, prefix + child_prefix))
+                else:
+                    lines.append(f"{prefix}{branch}{key}: {scalar(child)}")
+        elif isinstance(value, (list, tuple)):
+            sequence: Sequence[Any] = value
+            if not sequence:
+                lines.append(f"{prefix}`-- []")
+            for index, child in enumerate(sequence):
+                is_last = index == len(sequence) - 1
+                branch = "`-- " if is_last else "|-- "
+                child_prefix = "    " if is_last else "|   "
+                if isinstance(child, (Mapping, list, tuple)):
+                    lines.append(f"{prefix}{branch}[{index}]")
+                    lines.extend(render(child, prefix + child_prefix))
+                else:
+                    lines.append(f"{prefix}{branch}- {scalar(child)}")
+        else:
+            lines.append(f"{prefix}`-- {scalar(value)}")
+        return lines
+
+    return "\n".join([title, *render(config)])
 
 def add_dataset_args(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("dataset")

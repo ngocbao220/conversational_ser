@@ -16,10 +16,7 @@ import yaml
 
 TRAINER_MODULES = {
     "baseline": "scripts.train_baseline",
-    "cdm": "scripts.train_cdm",
-    "cim": "scripts.train_cim",
-    "dual_branch": "scripts.train_dual_branch",
-    "fusion": "scripts.train_fusion",
+    "cdim": "scripts.train_cdim",
 }
 METRIC_NAMES = ("WA", "UA", "WF1", "Macro-F1")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
