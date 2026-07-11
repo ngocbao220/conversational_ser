@@ -9,6 +9,7 @@ iemocap_export/
 outputs/
 iemocap/
 reports/
+reports_vie/
 results/**
 !results/
 !results/**/
