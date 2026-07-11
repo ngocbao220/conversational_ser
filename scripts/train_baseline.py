@@ -323,7 +323,7 @@ def save_checkpoint(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train a fixed mean-pooled WavLM embedding baseline without CDM/CIM.")
+    parser = argparse.ArgumentParser(description="Train a fixed mean-pooled SSL embedding baseline without CDM/CDIM.")
     parser.add_argument("--config", default="configs/wavlm_baseline_no_cdm_no_cim.yaml")
     add_dataset_override_args(parser)
     args = parser.parse_args()

@@ -5,13 +5,9 @@ __pycache__/
 .jupyter/
 .DS_Store
 .matplotlib_cache/
-iemocap_export/
 outputs/
-iemocap/
 reports/
-results/**
-!results/
-!results/**/
-!results/**/summary.ipynb
+reports_vie/
+results/*
 data/
 output/

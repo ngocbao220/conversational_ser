@@ -22,11 +22,8 @@ model:
   temporal_emb_dim: 64
   temporal_hidden_dim: 64
   dropout: 0.2
-  alpha_init: 0.0
-  beta_init: 0.0
-  fusion_mode: temporal_residual_sum
-  fix_alpha_zero: false
-  fix_beta_zero: false
+  residual_gate_init: 0.0
+  fusion_mode: early_concat
   temporal_input_mode: real
   disabled_temporal_feature_groups: []
   disabled_temporal_features: []

@@ -9,17 +9,11 @@ __all__ = [
     "WavLMSERBaselineConfig",
     "WavLM_CDMSerModel",
     "WavLMCIMConfig",
-    "WavLMDualBranchCIMConfig",
-    "WavLMDualBranchCIMSerModel",
     "WavLMCIMSerModel",
     "WavLMCDMConfig",
-    "DialogueMemoryBranch",
-    "TemporalInteractionEncoder",
-    "TemporalMemoryBranch",
     "TemporalFeatureEncoder",
     "CIMMemoryModule",
     "build_b0_model",
-    "build_wavlm_dual_branch_cim_ser_model",
     "build_wavlm_cdm_ser_model",
     "build_wavlm_ser_baseline",
     "build_wavlm_cim_ser_model",
@@ -39,17 +33,6 @@ def __getattr__(name: str):
         from models import wavlm_cdm
 
         return getattr(wavlm_cdm, name)
-    if name in {
-        "DialogueMemoryBranch",
-        "TemporalInteractionEncoder",
-        "TemporalMemoryBranch",
-        "WavLMDualBranchCIMConfig",
-        "WavLMDualBranchCIMSerModel",
-        "build_wavlm_dual_branch_cim_ser_model",
-    }:
-        from models import wavlm_dual_branch_cim
-
-        return getattr(wavlm_dual_branch_cim, name)
     if name in {
         "TemporalFeatureEncoder",
         "CIMMemoryModule",

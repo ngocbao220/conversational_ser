@@ -413,7 +413,7 @@ def save_checkpoint(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train WavLM mean-embedding + CDM SER model without CIM.")
+    parser = argparse.ArgumentParser(description="Train SSL mean-embedding + CDM SER model without CDIM.")
     parser.add_argument("--config", default="configs/wavlm_cdm_no_cim.yaml")
     add_dataset_override_args(parser)
     parser.add_argument("--debug_memory_trace", action="store_true", help="Save a dialogue-level memory trace for verification.")

@@ -160,7 +160,7 @@ CONTINUOUS_TEMPORAL_FEATURES = [
 
 @dataclass(frozen=True)
 class TemporalInputPolicy:
-    """Applies a reproducible temporal ablation without changing CIM parameters."""
+    """Applies a reproducible temporal ablation without changing CDIM parameters."""
 
     mode: str = "real"
     disabled_feature_groups: tuple[str, ...] = ()

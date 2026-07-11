@@ -1,157 +1,149 @@
 from __future__ import annotations
 
 import argparse
-import copy
 import json
-import math
+import statistics
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from statistics import mean, stdev
 from typing import Any, Mapping
 
 import yaml
 
 
-TRAINER_MODULES = {
-    "baseline": "scripts.train_baseline",
-    "cdm": "scripts.train_cdm",
-    "cim": "scripts.train_cim",
-    "dual_branch": "scripts.train_dual_branch",
-}
-METRIC_NAMES = ("WA", "UA", "WF1", "Macro-F1")
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SUMMARY_METRICS = ("WA", "UA", "WF1", "Macro-F1", "loss")
 
 
-def load_config(path: str | Path) -> dict[str, Any]:
-    with Path(path).open("r", encoding="utf-8") as handle:
-        return yaml.safe_load(handle)
+def _session_name(session: int | str) -> str:
+    text = str(session)
+    if text.startswith("Ses"):
+        return text
+    return f"Ses{int(text):02d}"
 
 
-def unique_run_dir(base_output_dir: Path, run_name: str | None) -> Path:
-    root = base_output_dir / "cross_session"
-    candidate_name = run_name or datetime.now().strftime("run_%Y%m%d_%H%M%S")
-    candidate = root / candidate_name
-    if not candidate.exists():
-        return candidate
-    if run_name:
-        raise FileExistsError(f"Cross-session run already exists: {candidate}")
-
-    suffix = 2
-    while (root / f"{candidate_name}_{suffix}").exists():
-        suffix += 1
-    return root / f"{candidate_name}_{suffix}"
+def _load_yaml(path: str | Path) -> dict[str, Any]:
+    with Path(path).open("r", encoding="utf-8") as f:
+        payload = yaml.safe_load(f)
+    if not isinstance(payload, dict):
+        raise ValueError(f"Expected mapping config at {path}")
+    return payload
 
 
-def normalize_sessions(raw_sessions: Any) -> list[int]:
-    if not isinstance(raw_sessions, list) or not raw_sessions:
-        raise ValueError("cross_session.test_sessions must be a non-empty list of session numbers.")
-    sessions = [int(session) for session in raw_sessions]
-    if any(session < 1 or session > 5 for session in sessions):
-        raise ValueError("cross_session.test_sessions may only contain IEMOCAP sessions 1 through 5.")
-    if len(set(sessions)) != len(sessions):
-        raise ValueError("cross_session.test_sessions must not contain duplicates.")
-    return sessions
+def _save_yaml(path: str | Path, payload: Mapping[str, Any]) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(dict(payload), sort_keys=False), encoding="utf-8")
 
 
-def fold_config(base_config: Mapping[str, Any], test_session: int, fold_dir: Path, run_name: str) -> dict[str, Any]:
-    config = copy.deepcopy(dict(base_config))
-    config["output_dir"] = str(fold_dir)
-    config["experiment_name"] = f"{base_config['experiment_name']}__test_Ses{test_session:02d}"
-    config.setdefault("dataset", {})["test_session"] = test_session
-    config.setdefault("cross_session", {})["enabled"] = False
-    config["cross_session"]["parent_run_name"] = run_name
-
-    wandb_cfg = config.get("wandb")
-    if isinstance(wandb_cfg, dict) and wandb_cfg.get("use_wandb", False):
-        base_name = str(wandb_cfg.get("run_name", base_config["experiment_name"]))
-        wandb_cfg["run_name"] = f"{base_name}__test_Ses{test_session:02d}"
-    return config
+def _save_json(path: str | Path, payload: Mapping[str, Any]) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def read_fold_metrics(path: Path) -> dict[str, float]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    metrics = payload.get("test", payload)
-    return {name: float(metrics[name]) for name in METRIC_NAMES}
-
-
-def summarize_folds(folds: list[dict[str, Any]]) -> dict[str, dict[str, float | int]]:
-    summary: dict[str, dict[str, float | int]] = {}
-    for metric_name in METRIC_NAMES:
-        values = [float(fold["metrics"][metric_name]) for fold in folds]
-        if not all(math.isfinite(value) for value in values):
-            raise ValueError(f"Non-finite {metric_name} value found in cross-session metrics.")
-        summary[metric_name] = {
-            "mean": mean(values),
-            "std": stdev(values) if len(values) > 1 else 0.0,
-            "n": len(values),
+def _metric_stats(rows: list[Mapping[str, Any]]) -> dict[str, dict[str, float]]:
+    summary: dict[str, dict[str, float]] = {}
+    for metric in SUMMARY_METRICS:
+        values = [float(row[metric]) for row in rows if row.get(metric) is not None]
+        if not values:
+            continue
+        summary[metric] = {
+            "mean": statistics.fmean(values),
+            "std": statistics.stdev(values) if len(values) > 1 else 0.0,
+            "min": min(values),
+            "max": max(values),
         }
     return summary
 
 
+def _write_per_session_csv(path: Path, rows: list[Mapping[str, Any]]) -> None:
+    columns = ["session", "output_dir", "best_epoch", *SUMMARY_METRICS]
+    lines = [",".join(columns)]
+    for row in rows:
+        values = []
+        for column in columns:
+            value = row.get(column, "")
+            values.append(str(value))
+        lines.append(",".join(values))
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def build_child_config(config: dict[str, Any], session: int | str, output_dir: Path) -> dict[str, Any]:
+    session_label = _session_name(session)
+    child = json.loads(json.dumps(config))
+    child.setdefault("dataset", {})["test_session"] = int(str(session_label).replace("Ses", ""))
+    child.setdefault("cross_session", {})["enabled"] = False
+    child["output_dir"] = str(output_dir)
+
+    base_name = str(config.get("experiment_name") or config.get("run_name") or output_dir.parent.parent.name)
+    child["experiment_name"] = f"{base_name}__test_{session_label}"
+    child["run_name"] = child["experiment_name"]
+    child.setdefault("wandb", {})["run_name"] = child["experiment_name"]
+    return child
+
+
 def run_cross_session(trainer_module: str, config_path: str | Path) -> Path:
-    if trainer_module not in TRAINER_MODULES.values():
-        raise ValueError(f"Unsupported trainer module: {trainer_module}")
+    config_path = Path(config_path)
+    config = _load_yaml(config_path)
+    cross_cfg = config.get("cross_session", {}) or {}
+    test_sessions = cross_cfg.get("test_sessions") or [1, 2, 3, 4, 5]
 
-    base_config = load_config(config_path)
-    dataset_name = str(base_config.get("dataset", {}).get("name", "iemocap")).lower()
-    if dataset_name != "iemocap":
-        raise ValueError(
-            f"cross_session LOSO is only supported for IEMOCAP, got dataset.name={dataset_name!r}. "
-            "For MELD, use the official train/dev/test split with cross_session.enabled=false."
-        )
-    cross_cfg = base_config.get("cross_session", {})
-    if not bool(cross_cfg.get("enabled", False)):
-        raise ValueError("Set cross_session.enabled=true before launching a cross-session run.")
+    base_output_dir = Path(str(config["output_dir"]))
+    run_name = cross_cfg.get("run_name") or datetime.now().strftime("run_%Y%m%d_%H%M%S")
+    run_dir = base_output_dir / "cross_session" / str(run_name)
+    configs_dir = run_dir / "configs"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    _save_yaml(run_dir / "base_config.yaml", config)
 
-    sessions = normalize_sessions(cross_cfg.get("test_sessions", [1, 2, 3, 4, 5]))
-    run_dir = unique_run_dir(Path(base_config["output_dir"]), cross_cfg.get("run_name"))
-    config_dir = run_dir / "configs"
-    config_dir.mkdir(parents=True, exist_ok=False)
-    run_name = run_dir.name
-    folds: list[dict[str, Any]] = []
-
-    for test_session in sessions:
-        fold_dir = run_dir / f"test_Ses{test_session:02d}"
-        child_config = fold_config(base_config, test_session, fold_dir, run_name)
-        child_config_path = config_dir / f"test_Ses{test_session:02d}.yaml"
-        child_config_path.write_text(yaml.safe_dump(child_config, sort_keys=False), encoding="utf-8")
+    session_rows: list[dict[str, Any]] = []
+    for session in test_sessions:
+        session_label = _session_name(session)
+        child_output_dir = run_dir / f"test_{session_label}"
+        child_config = build_child_config(config, session, child_output_dir)
+        child_config_path = configs_dir / f"test_{session_label}.yaml"
+        _save_yaml(child_config_path, child_config)
 
         subprocess.run(
             [sys.executable, "-m", trainer_module, "--config", str(child_config_path)],
-            cwd=PROJECT_ROOT,
             check=True,
         )
-        metrics_path = fold_dir / "metrics.json"
-        folds.append(
-            {
-                "test_session": test_session,
-                "output_dir": str(fold_dir),
-                "metrics": read_fold_metrics(metrics_path),
-            }
-        )
 
-        partial_summary = {
-            "trainer_module": trainer_module,
-            "run_name": run_name,
-            "test_sessions": sessions,
-            "folds": folds,
-            "aggregate": summarize_folds(folds),
+        metrics_path = child_output_dir / "metrics.json"
+        if not metrics_path.exists():
+            raise FileNotFoundError(f"Expected metrics file after training: {metrics_path}")
+        with metrics_path.open("r", encoding="utf-8") as f:
+            metrics = json.load(f)
+        row = {
+            "session": session_label,
+            "output_dir": str(child_output_dir),
+            "best_epoch": metrics.get("best_epoch", metrics.get("epoch")),
         }
-        (run_dir / "cross_session_summary.json").write_text(
-            json.dumps(partial_summary, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        for metric in SUMMARY_METRICS:
+            if metric in metrics:
+                row[metric] = metrics[metric]
+        session_rows.append(row)
 
-    return run_dir / "cross_session_summary.json"
+    summary = {
+        "trainer_module": trainer_module,
+        "config_path": str(config_path),
+        "run_dir": str(run_dir),
+        "test_sessions": [_session_name(session) for session in test_sessions],
+        "per_session": session_rows,
+        "metrics": _metric_stats(session_rows),
+    }
+    summary_path = run_dir / "cross_session_summary.json"
+    _save_json(summary_path, summary)
+    _write_per_session_csv(run_dir / "cross_session_metrics.csv", session_rows)
+    return summary_path
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run LOSO cross-session training and aggregate mean +/- std metrics.")
-    parser.add_argument("--trainer", choices=TRAINER_MODULES, required=True)
+    parser = argparse.ArgumentParser(description="Run LOSO cross-session training for one trainer/config pair.")
+    parser.add_argument("trainer_module")
     parser.add_argument("--config", required=True)
     args = parser.parse_args()
-    summary_path = run_cross_session(TRAINER_MODULES[args.trainer], args.config)
+    summary_path = run_cross_session(args.trainer_module, args.config)
     print(f"cross_session_summary={summary_path}")
 
 
