@@ -17,15 +17,15 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from models.wavlm_cim import WavLMCIMSerModel, build_wavlm_cim_ser_model
-from scripts.evaluate_temporal_subsets import save_temporal_subset_metrics
+from models.cdim import CDIMSerModel, build_cdim_ser_model
+from scripts.evaluate import save_temporal_subset_metrics
 from utils.dialogue_embeddings import (
     DialogueEmbedding,
-    TrainableWavLMMeanExtractor,
+    TrainableSSLMeanExtractor,
     build_audio_dialogues,
     build_dialogue_embeddings,
     load_embedding_cache,
-    precompute_wavlm_mean_embeddings,
+    precompute_ssl_mean_embeddings,
     save_embedding_cache,
 )
 from utils.experiment_metrics import (
@@ -35,7 +35,7 @@ from utils.experiment_metrics import (
     save_json,
 )
 from utils.iemocap_kaggle import (
-    LABEL_MAPPING_VERSION,
+    LABEL_MAPPING_ID,
     ID2LABEL,
     LABEL_NAMES,
     add_dataset_override_args,
@@ -147,11 +147,11 @@ def class_weights_from_dialogues(dialogues: Sequence[DialogueEmbedding], num_lab
 def cache_is_compatible(cache: Mapping[str, Any], config: Mapping[str, Any], expected_utterances: int) -> bool:
     metadata = cache.get("metadata", {})
     return (
-        metadata.get("wavlm_model_name") == config["model"].get("wavlm_model_name")
+        metadata.get("ssl_model_name") == config["model"].get("ssl_model_name")
         and int(metadata.get("sampling_rate", -1)) == int(config["dataset"].get("sampling_rate", 16000))
         and int(metadata.get("num_utterances", -1)) == int(expected_utterances)
         and metadata.get("pooling") == str(config.get("precompute", {}).get("pooling", "mean"))
-        and metadata.get("label_mapping_version") == LABEL_MAPPING_VERSION
+        and metadata.get("label_mapping_id") == LABEL_MAPPING_ID
     )
 
 
@@ -163,15 +163,15 @@ def prepare_dialogues(config: Mapping[str, Any], device: torch.device, log_path:
     if not bool(embedding_cfg.get("enabled", True)):
         from transformers import AutoConfig
 
-        embedding_dim = int(getattr(AutoConfig.from_pretrained(str(config["model"]["wavlm_model_name"])), "hidden_size"))
-        append_log(log_path, "precompute_mode=disabled end_to_end_wavlm=true")
+        embedding_dim = int(getattr(AutoConfig.from_pretrained(str(config["model"]["ssl_model_name"])), "hidden_size"))
+        append_log(log_path, "precompute_mode=disabled end_to_end_ssl=true")
         return {
             split_name: build_audio_dialogues(split_samples, embedding_dim=embedding_dim)
             for split_name, split_samples in splits.items()
         }, splits
 
     all_split_samples = [sample for split_samples in splits.values() for sample in split_samples]
-    cache_path = Path(str(embedding_cfg.get("cache_path", Path(config["output_dir"]) / "cache" / "wavlm_mean_embeddings.pt")))
+    cache_path = Path(str(embedding_cfg.get("cache_path", Path(config["output_dir"]) / "cache" / "ssl_mean_embeddings.pt")))
     force_recompute = bool(embedding_cfg.get("force_recompute", False))
     cache = None
     if cache_path.exists() and not force_recompute:
@@ -182,9 +182,9 @@ def prepare_dialogues(config: Mapping[str, Any], device: torch.device, log_path:
     if cache is None:
         pooling = str(embedding_cfg.get("pooling", "mean"))
         append_log(log_path, f"precompute_mode=fixed_{pooling}_pooled_wavlm")
-        rows_by_utterance = precompute_wavlm_mean_embeddings(
+        rows_by_utterance = precompute_ssl_mean_embeddings(
             all_split_samples,
-            wavlm_model_name=str(config["model"]["wavlm_model_name"]),
+            ssl_model_name=str(config["model"]["ssl_model_name"]),
             sampling_rate=int(dataset_cfg.get("sampling_rate", 16000)),
             batch_size=int(embedding_cfg.get("batch_size", config["training"].get("eval_batch_size", 16))),
             num_workers=int(config["training"].get("num_workers", 0)),
@@ -194,12 +194,12 @@ def prepare_dialogues(config: Mapping[str, Any], device: torch.device, log_path:
             pooling=pooling,
         )
         metadata = {
-            "wavlm_model_name": str(config["model"]["wavlm_model_name"]),
+            "ssl_model_name": str(config["model"]["ssl_model_name"]),
             "sampling_rate": int(dataset_cfg.get("sampling_rate", 16000)),
             "num_utterances": len(all_split_samples),
             "pooling": pooling,
             "frozen_wavlm": True,
-            "label_mapping_version": LABEL_MAPPING_VERSION,
+            "label_mapping_id": LABEL_MAPPING_ID,
         }
         save_embedding_cache(cache_path, rows_by_utterance, metadata)
     else:
@@ -213,7 +213,7 @@ def prepare_dialogues(config: Mapping[str, Any], device: torch.device, log_path:
     return dialogue_splits, splits
 
 
-def save_cim_predictions_csv(path: str | Path, rows: Sequence[Mapping[str, Any]], feature_names: Sequence[str]) -> None:
+def save_cdim_predictions_csv(path: str | Path, rows: Sequence[Mapping[str, Any]], feature_names: Sequence[str]) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
@@ -237,13 +237,13 @@ def save_cim_predictions_csv(path: str | Path, rows: Sequence[Mapping[str, Any]]
 
 
 def run_dialogue_epoch(
-    model: WavLMCIMSerModel,
+    model: CDIMSerModel,
     dialogues: Sequence[DialogueEmbedding],
     temporal_builder: TemporalInteractionFeatureBuilder,
     temporal_policy: TemporalInputPolicy,
     device: torch.device,
-    wavlm_extractor: TrainableWavLMMeanExtractor | None = None,
-    wavlm_batch_size: int = 4,
+    ssl_extractor: TrainableSSLMeanExtractor | None = None,
+    ssl_batch_size: int = 4,
     optimizer: Optional[torch.optim.Optimizer] = None,
     scheduler: Optional[Any] = None,
     class_weights: Optional[torch.Tensor] = None,
@@ -253,8 +253,8 @@ def run_dialogue_epoch(
 ) -> Dict[str, Any]:
     is_train = optimizer is not None
     model.train(is_train)
-    if wavlm_extractor is not None:
-        wavlm_extractor.train(is_train)
+    if ssl_extractor is not None:
+        ssl_extractor.train(is_train)
     dialogue_order = list(dialogues)
     if is_train:
         random.shuffle(dialogue_order)
@@ -266,8 +266,8 @@ def run_dialogue_epoch(
     iterator = tqdm(dialogue_order, desc=description, disable=not progress, dynamic_ncols=True)
     for dialogue in iterator:
         embeddings = (
-            wavlm_extractor.encode_rows(dialogue.rows, device=device, batch_size=wavlm_batch_size)
-            if wavlm_extractor is not None
+            ssl_extractor.encode_rows(dialogue.rows, device=device, batch_size=ssl_batch_size)
+            if ssl_extractor is not None
             else dialogue.embeddings.to(device)
         )
         labels = dialogue.labels.to(device)
@@ -291,7 +291,7 @@ def run_dialogue_epoch(
             )
             if is_train and has_valid:
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(trainable_parameters(model, wavlm_extractor), max_grad_norm)
+                torch.nn.utils.clip_grad_norm_(trainable_parameters(model, ssl_extractor), max_grad_norm)
                 optimizer.step()
                 if scheduler is not None:
                     scheduler.step()
@@ -377,8 +377,8 @@ def save_memory_trace_csv(path: str | Path, rows: Sequence[Mapping[str, Any]]) -
             writer.writerow({key: row.get(key, "") for key in fieldnames})
 
 
-def trace_cim_dialogue_memory(
-    model: WavLMCIMSerModel,
+def trace_cdim_dialogue_memory(
+    model: CDIMSerModel,
     dialogue: DialogueEmbedding,
     temporal_builder: TemporalInteractionFeatureBuilder,
     temporal_policy: TemporalInputPolicy,
@@ -431,18 +431,18 @@ def trace_cim_dialogue_memory(
 
 def save_checkpoint(
     path: Path,
-    model: WavLMCIMSerModel,
+    model: CDIMSerModel,
     config: Mapping[str, Any],
     epoch: int,
     metrics: Mapping[str, Any],
-    wavlm_extractor: TrainableWavLMMeanExtractor | None = None,
+    ssl_extractor: TrainableSSLMeanExtractor | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
             "experiment_name": config["experiment_name"],
             "model_state_dict": model.state_dict(),
-            "wavlm_extractor_state_dict": wavlm_extractor.state_dict() if wavlm_extractor is not None else None,
+            "ssl_extractor_state_dict": ssl_extractor.state_dict() if ssl_extractor is not None else None,
             "config": dict(config),
             "epoch": epoch,
             "metrics": dict(metrics),
@@ -454,7 +454,7 @@ def save_checkpoint(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train SSL mean-embedding + CDIM SER model.")
-    parser.add_argument("--config", default="configs/wavlm_cim.yaml")
+    parser.add_argument("--config", default="configs/main/wavlm_cdim.yaml")
     add_dataset_override_args(parser)
     parser.add_argument("--debug_memory_trace", action="store_true", help="Save a dialogue-level memory trace for verification.")
     parser.add_argument("--debug_memory_split", choices=["validation", "test"], default="test")
@@ -470,8 +470,8 @@ def main() -> None:
         summary_path = run_cross_session("scripts.train_cdim", args.config)
         print(f"cross_session_summary={summary_path}")
         return
-    if not bool(config["model"].get("use_temporal_features", False)):
-        raise ValueError("CDIM ablations require use_temporal_features=true to preserve the CDIM architecture.")
+    if not bool(config["model"].get("use_temporal_features", True)):
+        raise ValueError("CDIM training requires temporal features. Set model.use_temporal_features=true or omit it.")
     temporal_feature_set = str(config["model"].get("temporal_feature_set", "v1"))
     if temporal_feature_set not in TEMPORAL_FEATURE_SETS:
         raise ValueError(f"Unknown temporal_feature_set={temporal_feature_set!r}. Expected one of {sorted(TEMPORAL_FEATURE_SETS)}.")
@@ -507,18 +507,18 @@ def main() -> None:
     temporal_policy = TemporalInputPolicy.from_model_config(config["model"])
 
     embedding_dim = int(train_dialogues[0].embeddings.shape[-1])
-    model = build_wavlm_cim_ser_model(config["model"], embedding_dim=embedding_dim).to(device)
-    wavlm_extractor = None
+    model = build_cdim_ser_model(config["model"], embedding_dim=embedding_dim).to(device)
+    ssl_extractor = None
     if not bool(config.get("precompute", {}).get("enabled", True)):
-        wavlm_extractor = TrainableWavLMMeanExtractor(
-            wavlm_model_name=str(config["model"]["wavlm_model_name"]),
+        ssl_extractor = TrainableSSLMeanExtractor(
+            ssl_model_name=str(config["model"]["ssl_model_name"]),
             sampling_rate=int(config["dataset"].get("sampling_rate", 16000)),
             max_duration_seconds=config["dataset"].get("max_duration_seconds"),
-            freeze_wavlm=bool(config["model"].get("freeze_wavlm", True)),
+            freeze_ssl=bool(config["model"].get("freeze_ssl", True)),
             unfreeze_last_n_layers=int(config["model"].get("unfreeze_last_n_layers", 0)),
         ).to(device)
     counts = parameter_counts(model)
-    wavlm_counts = parameter_counts(wavlm_extractor) if wavlm_extractor is not None else {"total": 0, "trainable": 0, "frozen": 0}
+    ssl_counts = parameter_counts(ssl_extractor) if ssl_extractor is not None else {"total": 0, "trainable": 0, "frozen": 0}
     append_log(log_path, f"experiment={config['experiment_name']}")
     append_log(
         log_path,
@@ -532,15 +532,16 @@ def main() -> None:
         log_path,
         (
             f"embedding_dim={embedding_dim} pooling={config.get('precompute', {}).get('pooling', 'mean')} "
-            f"end_to_end_wavlm={wavlm_extractor is not None} "
+            f"end_to_end_ssl={ssl_extractor is not None} "
             f"unfreeze_last_n_layers={config['model'].get('unfreeze_last_n_layers', 0)}"
         ),
     )
     append_log(
         log_path,
         (
-            f"temporal_feature_mode={config['model']['temporal_feature_mode']} "
-            f"feature_set={temporal_feature_set} dim={config['model']['temporal_feature_dim']}"
+            f"temporal_feature_mode={config['model'].get('temporal_feature_mode', 'real')} "
+            f"feature_set={temporal_feature_set} "
+            f"dim={config['model'].get('temporal_feature_dim', expected_temporal_dim)}"
         ),
     )
     append_log(
@@ -551,12 +552,12 @@ def main() -> None:
     )
     append_log(log_path, "temporal_stats_source=train_split_only binary_flags_not_normalized=true")
     append_log(log_path, "memory_order=read_before_write reset=dialogue_boundary")
-    append_log(log_path, f"parameters cim total={counts['total']:,} trainable={counts['trainable']:,}")
-    if wavlm_extractor is not None:
-        append_log(log_path, f"parameters wavlm total={wavlm_counts['total']:,} trainable={wavlm_counts['trainable']:,}")
+    append_log(log_path, f"parameters cdim total={counts['total']:,} trainable={counts['trainable']:,}")
+    if ssl_extractor is not None:
+        append_log(log_path, f"parameters ssl total={ssl_counts['total']:,} trainable={ssl_counts['trainable']:,}")
 
     optimizer = torch.optim.AdamW(
-        trainable_parameters(model, wavlm_extractor),
+        trainable_parameters(model, ssl_extractor),
         lr=float(config["training"].get("learning_rate", 1e-4)),
         weight_decay=float(config["training"].get("weight_decay", 0.01)),
     )
@@ -582,8 +583,8 @@ def main() -> None:
             temporal_builder,
             temporal_policy,
             device,
-            wavlm_extractor=wavlm_extractor,
-            wavlm_batch_size=int(config["training"].get("wavlm_batch_size", 4)),
+            ssl_extractor=ssl_extractor,
+            ssl_batch_size=int(config["training"].get("ssl_batch_size", 4)),
             optimizer=optimizer,
             scheduler=scheduler,
             class_weights=class_weights,
@@ -597,8 +598,8 @@ def main() -> None:
             temporal_builder,
             temporal_policy,
             device,
-            wavlm_extractor=wavlm_extractor,
-            wavlm_batch_size=int(config["training"].get("eval_wavlm_batch_size", config["training"].get("wavlm_batch_size", 4))),
+            ssl_extractor=ssl_extractor,
+            ssl_batch_size=int(config["training"].get("eval_ssl_batch_size", config["training"].get("ssl_batch_size", 4))),
             progress=progress,
             description=f"{config['experiment_name']} epoch {epoch}/{max_epochs} validation",
         )
@@ -628,25 +629,25 @@ def main() -> None:
                 step=epoch,
             )
 
-        save_checkpoint(output_dir / "last.pth", model, config, epoch, val_metrics, wavlm_extractor=wavlm_extractor)
+        save_checkpoint(output_dir / "last.pth", model, config, epoch, val_metrics, ssl_extractor=ssl_extractor)
         if float(val_metrics["UA"]) > best_ua:
             best_ua = float(val_metrics["UA"])
             best_epoch = epoch
             best_validation_metrics = val_metrics
-            save_checkpoint(output_dir / "best.pth", model, config, epoch, val_metrics, wavlm_extractor=wavlm_extractor)
+            save_checkpoint(output_dir / "best.pth", model, config, epoch, val_metrics, ssl_extractor=ssl_extractor)
 
     checkpoint = torch.load(output_dir / "best.pth", map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
-    if wavlm_extractor is not None and checkpoint.get("wavlm_extractor_state_dict") is not None:
-        wavlm_extractor.load_state_dict(checkpoint["wavlm_extractor_state_dict"])
+    if ssl_extractor is not None and checkpoint.get("ssl_extractor_state_dict") is not None:
+        ssl_extractor.load_state_dict(checkpoint["ssl_extractor_state_dict"])
     test_output = run_dialogue_epoch(
         model,
         test_dialogues,
         temporal_builder,
         temporal_policy,
         device,
-        wavlm_extractor=wavlm_extractor,
-        wavlm_batch_size=int(config["training"].get("eval_wavlm_batch_size", config["training"].get("wavlm_batch_size", 4))),
+        ssl_extractor=ssl_extractor,
+        ssl_batch_size=int(config["training"].get("eval_ssl_batch_size", config["training"].get("ssl_batch_size", 4))),
         progress=progress,
         description=f"{config['experiment_name']} test",
     )
@@ -659,13 +660,13 @@ def main() -> None:
     }
     save_json(output_dir / "metrics.json", metrics_payload)
     predictions_path = output_dir / "predictions.csv"
-    save_cim_predictions_csv(predictions_path, test_output["prediction_rows"], temporal_builder.stats.feature_names)
+    save_cdim_predictions_csv(predictions_path, test_output["prediction_rows"], temporal_builder.stats.feature_names)
     save_confusion_matrix_csv(output_dir / "confusion_matrix.csv", test_metrics["confusion_matrix"], LABEL_NAMES)
     save_confusion_matrix_png(output_dir / "confusion_matrix.png", test_metrics["confusion_matrix"], LABEL_NAMES)
     save_temporal_subset_metrics(
-        predictions_path=predictions_path,
         output_path=output_dir / "subset_metrics.json",
-        strong_overlap_threshold=float(config["analysis"].get("strong_overlap_threshold", 0.25)),
+        prediction_rows=test_output["prediction_rows"],
+        strong_overlap_threshold=float(config.get("analysis", {}).get("strong_overlap_threshold", 0.25)),
     )
     append_log(log_path, f"test_WA={test_metrics['WA']:.6f} test_UA={test_metrics['UA']:.6f}")
     if args.debug_memory_trace:
@@ -674,7 +675,7 @@ def main() -> None:
             split_name=args.debug_memory_split,
             dialogue_id=args.debug_memory_dialogue_id,
         )
-        trace_rows = trace_cim_dialogue_memory(
+        trace_rows = trace_cdim_dialogue_memory(
             model,
             debug_dialogue,
             temporal_builder,

@@ -31,7 +31,7 @@ TEMPORAL_FEATURE_NAMES = [
     "speaker_prev_turn_count_norm",
 ]
 
-CIM_V2_RECOMMENDED_FEATURE_NAMES = [
+CDIM_V2_RECOMMENDED_FEATURE_NAMES = [
     "duration",
     "gap_prev",
     "prev_gap_abs",
@@ -70,7 +70,7 @@ CIM_V2_RECOMMENDED_FEATURE_NAMES = [
     "consecutive_overlap_count",
 ]
 
-CIM_SELECTED_PRIMITIVE_FEATURE_NAMES = [
+CDIM_SELECTED_PRIMITIVE_FEATURE_NAMES = [
     "previous_mean_gap",
     "silence_density_10s",
     "speaker_prev_mean_duration",
@@ -85,21 +85,21 @@ CIM_SELECTED_PRIMITIVE_FEATURE_NAMES = [
     "window3_average_gap",
 ]
 
-CIM_INTERACTION_4_FEATURE_NAMES = [
+CDIM_INTERACTION_4_FEATURE_NAMES = [
     "relative_gap_to_speaker_mean",
     "overlap_ratio",
     "speaker_switch",
     "speaker_prev_overlap_rate",
 ]
 
-CIM_4_NEW_FEATURE_NAMES = [
+CDIM_4NEW_FEATURE_NAMES = [
     "relative_gap",
     "overlap_ratio",
     "duration",
     "speaker_switch",
 ]
 
-CIM_SELECTED_8_FEATURE_NAMES = [
+CDIM_SELECTED_8_FEATURE_NAMES = [
     "duration",
     "overlap_ratio",
     "gap_prev",
@@ -110,7 +110,7 @@ CIM_SELECTED_8_FEATURE_NAMES = [
     "speaker_prev_turn_count_norm",
 ]
 
-CIM_SELECTED_8_TURN_FEATURE_NAMES = [
+CDIM_SELECTED_8_TURN_FEATURE_NAMES = [
     "duration",
     "gap_prev",
     "overlap_ratio",
@@ -123,12 +123,12 @@ CIM_SELECTED_8_TURN_FEATURE_NAMES = [
 
 TEMPORAL_FEATURE_SETS = {
     "v1": TEMPORAL_FEATURE_NAMES,
-    "recommended_v2": CIM_V2_RECOMMENDED_FEATURE_NAMES,
-    "selected_primitives": CIM_SELECTED_PRIMITIVE_FEATURE_NAMES,
-    "interaction_4": CIM_INTERACTION_4_FEATURE_NAMES,
-    "cim_4_new": CIM_4_NEW_FEATURE_NAMES,
-    "selected_8": CIM_SELECTED_8_FEATURE_NAMES,
-    "selected_8_turn": CIM_SELECTED_8_TURN_FEATURE_NAMES,
+    "recommended_v2": CDIM_V2_RECOMMENDED_FEATURE_NAMES,
+    "selected_primitives": CDIM_SELECTED_PRIMITIVE_FEATURE_NAMES,
+    "interaction_4": CDIM_INTERACTION_4_FEATURE_NAMES,
+    "cdim_4new": CDIM_4NEW_FEATURE_NAMES,
+    "selected_8": CDIM_SELECTED_8_FEATURE_NAMES,
+    "selected_8_turn": CDIM_SELECTED_8_TURN_FEATURE_NAMES,
 }
 
 BINARY_TEMPORAL_FEATURES = {

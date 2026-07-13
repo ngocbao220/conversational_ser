@@ -21,7 +21,7 @@ IGNORE_LABEL_ID = -100
 CONTEXT_LABEL_NAME = "context"
 ID2LABEL = {idx: label for label, idx in LABEL2ID.items()}
 ID2LABEL[IGNORE_LABEL_ID] = CONTEXT_LABEL_NAME
-LABEL_MAPPING_VERSION = "iemocap_strict4_context_timeline_v4"
+LABEL_MAPPING_ID = "iemocap_strict4_context_timeline_v4"
 
 # Strict 4-class IEMOCAP policy: retain canonical labels and map only
 # excited -> happy. Other raw labels remain in the dialogue as context-only

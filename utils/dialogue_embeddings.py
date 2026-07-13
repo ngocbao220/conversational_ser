@@ -77,9 +77,9 @@ def pool_hidden_states(hidden_states: torch.Tensor, mask: Optional[torch.Tensor]
     raise ValueError(f"Unsupported pooling={pooling!r}. Expected one of: mean, attentive_statistics.")
 
 
-def precompute_wavlm_mean_embeddings(
+def precompute_ssl_mean_embeddings(
     samples: Sequence[ConversationSERSample],
-    wavlm_model_name: str,
+    ssl_model_name: str,
     sampling_rate: int,
     batch_size: int,
     num_workers: int,
@@ -90,7 +90,7 @@ def precompute_wavlm_mean_embeddings(
 ) -> Dict[str, Dict[str, Any]]:
     from transformers import AutoFeatureExtractor, AutoModel
 
-    feature_extractor = AutoFeatureExtractor.from_pretrained(wavlm_model_name)
+    feature_extractor = AutoFeatureExtractor.from_pretrained(ssl_model_name)
     collator = ConversationalSERCollator(feature_extractor, sampling_rate=sampling_rate)
     dataset = ConversationalSERDataset(
         sort_samples_for_dialogue(samples),
@@ -104,11 +104,11 @@ def precompute_wavlm_mean_embeddings(
         num_workers=num_workers,
         collate_fn=collator,
     )
-    model = AutoModel.from_pretrained(wavlm_model_name).to(device)
+    model = AutoModel.from_pretrained(ssl_model_name).to(device)
     model.eval()
 
     rows_by_utterance: Dict[str, Dict[str, Any]] = {}
-    iterator = tqdm(dataloader, desc=f"precompute fixed {pooling} WavLM embeddings", disable=not progress, dynamic_ncols=True)
+    iterator = tqdm(dataloader, desc=f"precompute fixed {pooling} SSL embeddings", disable=not progress, dynamic_ncols=True)
     with torch.no_grad():
         for batch in iterator:
             input_values = batch["input_values"].to(device)
@@ -202,43 +202,43 @@ def build_audio_dialogues(samples: Sequence[ConversationSERSample], embedding_di
     return sorted(dialogues, key=lambda dialogue: dialogue.dialogue_id)
 
 
-class TrainableWavLMMeanExtractor(torch.nn.Module):
-    """Mean-pooled WavLM utterance encoder for end-to-end dialogue training."""
+class TrainableSSLMeanExtractor(torch.nn.Module):
+    """Mean-pooled SSL utterance encoder for end-to-end dialogue training."""
 
     def __init__(
         self,
-        wavlm_model_name: str,
+        ssl_model_name: str,
         sampling_rate: int = 16000,
         max_duration_seconds: float | None = None,
-        freeze_wavlm: bool = True,
+        freeze_ssl: bool = True,
         unfreeze_last_n_layers: int = 0,
     ) -> None:
         super().__init__()
         from transformers import AutoConfig, AutoFeatureExtractor, AutoModel
 
-        self.wavlm_model_name = str(wavlm_model_name)
+        self.ssl_model_name = str(ssl_model_name)
         self.sampling_rate = int(sampling_rate)
         self.max_audio_length = (
             int(float(max_duration_seconds) * self.sampling_rate)
             if max_duration_seconds is not None and float(max_duration_seconds) > 0
             else None
         )
-        self.feature_extractor = AutoFeatureExtractor.from_pretrained(self.wavlm_model_name)
-        self.wavlm = AutoModel.from_pretrained(self.wavlm_model_name)
-        self.hidden_size = int(getattr(AutoConfig.from_pretrained(self.wavlm_model_name), "hidden_size"))
+        self.feature_extractor = AutoFeatureExtractor.from_pretrained(self.ssl_model_name)
+        self.ssl_model = AutoModel.from_pretrained(self.ssl_model_name)
+        self.hidden_size = int(getattr(AutoConfig.from_pretrained(self.ssl_model_name), "hidden_size"))
 
-        if freeze_wavlm:
-            for parameter in self.wavlm.parameters():
+        if freeze_ssl:
+            for parameter in self.ssl_model.parameters():
                 parameter.requires_grad = False
             self._unfreeze_last_layers(int(unfreeze_last_n_layers))
-        self.wavlm_fully_frozen = not any(parameter.requires_grad for parameter in self.wavlm.parameters())
+        self.ssl_model_fully_frozen = not any(parameter.requires_grad for parameter in self.ssl_model.parameters())
 
     def _unfreeze_last_layers(self, num_layers: int) -> None:
         if num_layers <= 0:
             return
-        layers = getattr(getattr(self.wavlm, "encoder", None), "layers", None)
+        layers = getattr(getattr(self.ssl_model, "encoder", None), "layers", None)
         if layers is None:
-            raise ValueError(f"Cannot locate WavLM encoder layers for {self.wavlm_model_name!r}.")
+            raise ValueError(f"Cannot locate SSL encoder layers for {self.ssl_model_name!r}.")
         for layer in layers[-num_layers:]:
             for parameter in layer.parameters():
                 parameter.requires_grad = True
@@ -246,8 +246,8 @@ class TrainableWavLMMeanExtractor(torch.nn.Module):
     def _feature_attention_mask(self, attention_mask: torch.Tensor | None, feature_length: int) -> torch.Tensor | None:
         if attention_mask is None:
             return None
-        if hasattr(self.wavlm, "_get_feat_extract_output_lengths"):
-            lengths = self.wavlm._get_feat_extract_output_lengths(attention_mask.sum(dim=1)).to(torch.long)
+        if hasattr(self.ssl_model, "_get_feat_extract_output_lengths"):
+            lengths = self.ssl_model._get_feat_extract_output_lengths(attention_mask.sum(dim=1)).to(torch.long)
             mask = torch.zeros((attention_mask.shape[0], feature_length), device=attention_mask.device, dtype=torch.long)
             for index, length in enumerate(lengths):
                 mask[index, : min(int(length), feature_length)] = 1
@@ -287,11 +287,11 @@ class TrainableWavLMMeanExtractor(torch.nn.Module):
             attention_mask = encoded.get("attention_mask")
             if attention_mask is not None:
                 attention_mask = attention_mask.to(device)
-            if self.wavlm_fully_frozen:
+            if self.ssl_model_fully_frozen:
                 with torch.no_grad():
-                    outputs = self.wavlm(input_values=input_values, attention_mask=attention_mask)
+                    outputs = self.ssl_model(input_values=input_values, attention_mask=attention_mask)
             else:
-                outputs = self.wavlm(input_values=input_values, attention_mask=attention_mask)
+                outputs = self.ssl_model(input_values=input_values, attention_mask=attention_mask)
             hidden_states = outputs.last_hidden_state
             feature_mask = self._feature_attention_mask(attention_mask, hidden_states.shape[1])
             embeddings.append(self._mean_pool(hidden_states, feature_mask))

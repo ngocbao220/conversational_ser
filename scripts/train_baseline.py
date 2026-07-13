@@ -12,14 +12,14 @@ import yaml
 from tqdm import tqdm
 from transformers import get_cosine_schedule_with_warmup, get_linear_schedule_with_warmup
 
-from models.wavlm_baseline import MeanEmbeddingBaseline, build_mean_embedding_baseline
+from models.baseline import MeanEmbeddingBaseline, build_mean_embedding_baseline
 from utils.dialogue_embeddings import (
     DialogueEmbedding,
-    TrainableWavLMMeanExtractor,
+    TrainableSSLMeanExtractor,
     build_audio_dialogues,
     build_dialogue_embeddings,
     load_embedding_cache,
-    precompute_wavlm_mean_embeddings,
+    precompute_ssl_mean_embeddings,
     save_embedding_cache,
 )
 from utils.experiment_metrics import (
@@ -31,7 +31,7 @@ from utils.experiment_metrics import (
 )
 from utils.iemocap_kaggle import (
     ID2LABEL,
-    LABEL_MAPPING_VERSION,
+    LABEL_MAPPING_ID,
     LABEL_NAMES,
     add_dataset_override_args,
     apply_dataset_overrides,
@@ -88,12 +88,12 @@ def trainable_parameters(*modules: torch.nn.Module | None) -> list[torch.nn.Para
 def create_optimizer(
     model: MeanEmbeddingBaseline,
     config: Mapping[str, Any],
-    wavlm_extractor: TrainableWavLMMeanExtractor | None = None,
+    ssl_extractor: TrainableSSLMeanExtractor | None = None,
 ) -> torch.optim.Optimizer:
     training_cfg = config["training"]
     classifier_lr = float(training_cfg.get("learning_rate_classifier", 1e-4))
     weight_decay = float(training_cfg.get("weight_decay", 0.01))
-    trainable_params = trainable_parameters(model, wavlm_extractor)
+    trainable_params = trainable_parameters(model, ssl_extractor)
     if not trainable_params:
         raise RuntimeError("No trainable parameters found.")
     return torch.optim.AdamW(trainable_params, lr=classifier_lr, weight_decay=weight_decay)
@@ -139,11 +139,11 @@ def init_wandb(config: Mapping[str, Any], output_dir: Path, log_path: Path):
 def cache_is_compatible(cache: Mapping[str, Any], config: Mapping[str, Any], expected_utterances: int) -> bool:
     metadata = cache.get("metadata", {})
     return (
-        metadata.get("wavlm_model_name") == config["model"].get("wavlm_model_name")
+        metadata.get("ssl_model_name") == config["model"].get("ssl_model_name")
         and int(metadata.get("sampling_rate", -1)) == int(config["dataset"].get("sampling_rate", 16000))
         and int(metadata.get("num_utterances", -1)) == int(expected_utterances)
         and metadata.get("pooling") == str(config.get("precompute", {}).get("pooling", "mean"))
-        and metadata.get("label_mapping_version") == LABEL_MAPPING_VERSION
+        and metadata.get("label_mapping_id") == LABEL_MAPPING_ID
     )
 
 
@@ -156,15 +156,15 @@ def prepare_dialogues(config: Mapping[str, Any], device: torch.device, log_path:
     if not bool(embedding_cfg.get("enabled", True)):
         from transformers import AutoConfig
 
-        embedding_dim = int(getattr(AutoConfig.from_pretrained(str(model_cfg["wavlm_model_name"])), "hidden_size"))
-        append_log(log_path, "precompute_mode=disabled end_to_end_wavlm=true")
+        embedding_dim = int(getattr(AutoConfig.from_pretrained(str(model_cfg["ssl_model_name"])), "hidden_size"))
+        append_log(log_path, "precompute_mode=disabled end_to_end_ssl=true")
         return {
             split_name: build_audio_dialogues(split_samples, embedding_dim=embedding_dim)
             for split_name, split_samples in splits.items()
         }, splits
 
     all_split_samples = [sample for split_samples in splits.values() for sample in split_samples]
-    cache_path = Path(str(embedding_cfg.get("cache_path", Path(config["output_dir"]) / "cache" / "wavlm_mean_embeddings.pt")))
+    cache_path = Path(str(embedding_cfg.get("cache_path", Path(config["output_dir"]) / "cache" / "ssl_mean_embeddings.pt")))
     force_recompute = bool(embedding_cfg.get("force_recompute", False))
     cache = None
     if cache_path.exists() and not force_recompute:
@@ -176,9 +176,9 @@ def prepare_dialogues(config: Mapping[str, Any], device: torch.device, log_path:
     if cache is None:
         pooling = str(embedding_cfg.get("pooling", "mean"))
         append_log(log_path, f"precompute_mode=fixed_{pooling}_pooled_wavlm")
-        rows_by_utterance = precompute_wavlm_mean_embeddings(
+        rows_by_utterance = precompute_ssl_mean_embeddings(
             all_split_samples,
-            wavlm_model_name=str(model_cfg["wavlm_model_name"]),
+            ssl_model_name=str(model_cfg["ssl_model_name"]),
             sampling_rate=int(dataset_cfg.get("sampling_rate", 16000)),
             batch_size=int(embedding_cfg.get("batch_size", config["training"].get("eval_batch_size", 16))),
             num_workers=int(config["training"].get("num_workers", 0)),
@@ -191,12 +191,12 @@ def prepare_dialogues(config: Mapping[str, Any], device: torch.device, log_path:
             cache_path,
             rows_by_utterance,
             {
-                "wavlm_model_name": str(model_cfg["wavlm_model_name"]),
+                "ssl_model_name": str(model_cfg["ssl_model_name"]),
                 "sampling_rate": int(dataset_cfg.get("sampling_rate", 16000)),
                 "num_utterances": len(all_split_samples),
                 "pooling": pooling,
                 "frozen_wavlm": True,
-                "label_mapping_version": LABEL_MAPPING_VERSION,
+                "label_mapping_id": LABEL_MAPPING_ID,
             },
         )
     else:
@@ -214,8 +214,8 @@ def run_epoch(
     model: MeanEmbeddingBaseline,
     dialogues: Sequence[DialogueEmbedding],
     device: torch.device,
-    wavlm_extractor: TrainableWavLMMeanExtractor | None = None,
-    wavlm_batch_size: int = 4,
+    ssl_extractor: TrainableSSLMeanExtractor | None = None,
+    ssl_batch_size: int = 4,
     optimizer: Optional[torch.optim.Optimizer] = None,
     scheduler: Optional[Any] = None,
     max_grad_norm: float = 1.0,
@@ -224,8 +224,8 @@ def run_epoch(
 ) -> Dict[str, Any]:
     is_train = optimizer is not None
     model.train(is_train)
-    if wavlm_extractor is not None:
-        wavlm_extractor.train(is_train)
+    if ssl_extractor is not None:
+        ssl_extractor.train(is_train)
     dialogue_order = list(dialogues)
     if is_train:
         random.shuffle(dialogue_order)
@@ -237,8 +237,8 @@ def run_epoch(
 
     for dialogue in iterator:
         embeddings = (
-            wavlm_extractor.encode_rows(dialogue.rows, device=device, batch_size=wavlm_batch_size)
-            if wavlm_extractor is not None
+            ssl_extractor.encode_rows(dialogue.rows, device=device, batch_size=ssl_batch_size)
+            if ssl_extractor is not None
             else dialogue.embeddings.to(device)
         )
         labels = dialogue.labels.to(device)
@@ -254,7 +254,7 @@ def run_epoch(
             )
             if is_train and has_valid:
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(trainable_parameters(model, wavlm_extractor), max_grad_norm)
+                torch.nn.utils.clip_grad_norm_(trainable_parameters(model, ssl_extractor), max_grad_norm)
                 optimizer.step()
                 if scheduler is not None:
                     scheduler.step()
@@ -305,14 +305,14 @@ def save_checkpoint(
     config: Mapping[str, Any],
     epoch: int,
     metrics: Mapping[str, Any],
-    wavlm_extractor: TrainableWavLMMeanExtractor | None = None,
+    ssl_extractor: TrainableSSLMeanExtractor | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
             "experiment_name": config["experiment_name"],
             "model_state_dict": model.state_dict(),
-            "wavlm_extractor_state_dict": wavlm_extractor.state_dict() if wavlm_extractor is not None else None,
+            "ssl_extractor_state_dict": ssl_extractor.state_dict() if ssl_extractor is not None else None,
             "config": dict(config),
             "epoch": epoch,
             "metrics": dict(metrics),
@@ -324,7 +324,7 @@ def save_checkpoint(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train a fixed mean-pooled SSL embedding baseline without CDM/CDIM.")
-    parser.add_argument("--config", default="configs/wavlm_baseline_no_cdm_no_cim.yaml")
+    parser.add_argument("--config", default="configs/main/wavlm_baseline.yaml")
     add_dataset_override_args(parser)
     args = parser.parse_args()
 
@@ -352,32 +352,32 @@ def main() -> None:
     test_dialogues = dialogue_splits["test"]
     embedding_dim = int(train_dialogues[0].embeddings.shape[-1])
     model = build_mean_embedding_baseline(config["model"], embedding_dim=embedding_dim).to(device)
-    wavlm_extractor = None
+    ssl_extractor = None
     if not bool(config.get("precompute", {}).get("enabled", True)):
-        wavlm_extractor = TrainableWavLMMeanExtractor(
-            wavlm_model_name=str(config["model"]["wavlm_model_name"]),
+        ssl_extractor = TrainableSSLMeanExtractor(
+            ssl_model_name=str(config["model"]["ssl_model_name"]),
             sampling_rate=int(config["dataset"].get("sampling_rate", 16000)),
             max_duration_seconds=config["dataset"].get("max_duration_seconds"),
-            freeze_wavlm=bool(config["model"].get("freeze_wavlm", True)),
+            freeze_ssl=bool(config["model"].get("freeze_ssl", True)),
             unfreeze_last_n_layers=int(config["model"].get("unfreeze_last_n_layers", 0)),
         ).to(device)
     counts = parameter_counts(model)
-    wavlm_counts = parameter_counts(wavlm_extractor) if wavlm_extractor is not None else {"total": 0, "trainable": 0, "frozen": 0}
+    ssl_counts = parameter_counts(ssl_extractor) if ssl_extractor is not None else {"total": 0, "trainable": 0, "frozen": 0}
     append_log(log_path, f"experiment={config['experiment_name']}")
     append_log(log_path, f"splits train={len(splits['train'])} validation={len(splits['validation'])} test={len(splits['test'])}")
     append_log(
         log_path,
         (
             f"embedding_dim={embedding_dim} pooling={config.get('precompute', {}).get('pooling', 'mean')} "
-            f"end_to_end_wavlm={wavlm_extractor is not None} "
+            f"end_to_end_ssl={ssl_extractor is not None} "
             f"unfreeze_last_n_layers={config['model'].get('unfreeze_last_n_layers', 0)}"
         ),
     )
     append_log(log_path, f"parameters classifier total={counts['total']:,} trainable={counts['trainable']:,}")
-    if wavlm_extractor is not None:
-        append_log(log_path, f"parameters wavlm total={wavlm_counts['total']:,} trainable={wavlm_counts['trainable']:,}")
+    if ssl_extractor is not None:
+        append_log(log_path, f"parameters ssl total={ssl_counts['total']:,} trainable={ssl_counts['trainable']:,}")
 
-    optimizer = create_optimizer(model, config, wavlm_extractor=wavlm_extractor)
+    optimizer = create_optimizer(model, config, ssl_extractor=ssl_extractor)
     total_steps = max(1, len(train_dialogues) * int(config["training"].get("max_epochs", 10)))
     scheduler = create_scheduler(optimizer, config, total_steps)
     wandb_run = init_wandb(config, output_dir, log_path)
@@ -394,8 +394,8 @@ def main() -> None:
             model,
             train_dialogues,
             device,
-            wavlm_extractor=wavlm_extractor,
-            wavlm_batch_size=int(config["training"].get("wavlm_batch_size", config["training"].get("batch_size", 4))),
+            ssl_extractor=ssl_extractor,
+            ssl_batch_size=int(config["training"].get("ssl_batch_size", config["training"].get("batch_size", 4))),
             optimizer=optimizer,
             scheduler=scheduler,
             max_grad_norm=max_grad_norm,
@@ -406,8 +406,8 @@ def main() -> None:
             model,
             val_dialogues,
             device,
-            wavlm_extractor=wavlm_extractor,
-            wavlm_batch_size=int(config["training"].get("eval_wavlm_batch_size", config["training"].get("eval_batch_size", 4))),
+            ssl_extractor=ssl_extractor,
+            ssl_batch_size=int(config["training"].get("eval_ssl_batch_size", config["training"].get("eval_batch_size", 4))),
             progress=progress,
             description=f"{config['experiment_name']} epoch {epoch}/{max_epochs} validation",
         )
@@ -437,23 +437,23 @@ def main() -> None:
                 step=epoch,
             )
 
-        save_checkpoint(output_dir / "last.pth", model, config, epoch, val_metrics, wavlm_extractor=wavlm_extractor)
+        save_checkpoint(output_dir / "last.pth", model, config, epoch, val_metrics, ssl_extractor=ssl_extractor)
         if float(val_metrics["UA"]) > best_ua:
             best_ua = float(val_metrics["UA"])
             best_epoch = epoch
             best_validation_metrics = val_metrics
-            save_checkpoint(output_dir / "best.pth", model, config, epoch, val_metrics, wavlm_extractor=wavlm_extractor)
+            save_checkpoint(output_dir / "best.pth", model, config, epoch, val_metrics, ssl_extractor=ssl_extractor)
 
     checkpoint = torch.load(output_dir / "best.pth", map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
-    if wavlm_extractor is not None and checkpoint.get("wavlm_extractor_state_dict") is not None:
-        wavlm_extractor.load_state_dict(checkpoint["wavlm_extractor_state_dict"])
+    if ssl_extractor is not None and checkpoint.get("ssl_extractor_state_dict") is not None:
+        ssl_extractor.load_state_dict(checkpoint["ssl_extractor_state_dict"])
     test_output = run_epoch(
         model,
         test_dialogues,
         device,
-        wavlm_extractor=wavlm_extractor,
-        wavlm_batch_size=int(config["training"].get("eval_wavlm_batch_size", config["training"].get("eval_batch_size", 4))),
+        ssl_extractor=ssl_extractor,
+        ssl_batch_size=int(config["training"].get("eval_ssl_batch_size", config["training"].get("eval_batch_size", 4))),
         progress=progress,
         description=f"{config['experiment_name']} test",
     )
